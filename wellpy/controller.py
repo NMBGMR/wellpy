@@ -24,11 +24,9 @@ from pyface.action.tool_bar_manager import ToolBarManager
 from pyface.confirmation_dialog import confirm
 from pyface.constant import YES
 from pyface.file_dialog import FileDialog
-from pyface.message_dialog import warning
-from traits.api import Instance, Button, Float, Str
-from traitsui.api import Controller, View, UItem, Item
-# ============= standard library imports ========================
-# ============= local library imports  ==========================
+from pyface.message_dialog import warning, information
+from traits.api import Instance, Button, Float, Str, HasTraits, Password
+from traitsui.api import Controller, View, UItem, Item, VGroup
 from traitsui.menu import Action
 
 from wellpy.config import config
@@ -41,12 +39,49 @@ class WellpyController(Controller):
     offset = Float
     title = Str
 
+    def configure_db(self, info):
+        class Connection(HasTraits):
+            name = Str
+            user = Str
+            host = Str
+            password = Password
+
+        v = View(VGroup(Item('host', label='Server', tooltip='Database Server IP address e.g., 192.168.0.1'),
+                        Item('user', label='Username', tooltip='Username for connecting to database'),
+                        Item('password', tooltip='Password for connecting to database'),
+                        Item('name', tooltip='Name of database')),
+                 buttons=['OK','Cancel'],
+                 width=300,
+                 kind='livemodal',
+                 title='Edit Database Connection')
+
+        c = Connection()
+        attrs = ('host', 'user', 'password', 'name')
+        for a in attrs:
+            setattr(c, a, getattr(config, 'db_{}'.format(a)) or '')
+
+        info = c.edit_traits(view=v)
+        if info.result:
+            for a in attrs:
+                config.set_value('db_{}'.format(a), str(getattr(c, a)))
+            config.dump()
+            config.load()
+
+    def import_db(self, info):
+        result, url = self.model.import_db()
+        if result:
+            information(None, 'Added to database.\n\n {}'.format(url))
+        else:
+            warning(None, 'Unable to connect to database.\n\n {}'.format(url))
+
     def open_csv(self, info):
-        self.model.load_file('/Users/ross/Programming/github/wellpy/data/AR0209_AztecMW.xlsx')
-        # dlg = FileDialog(action='open', default_directory=config.default_data_dir)
-        # if dlg.open() == 'OK':
-        #     if os.path.isfile(dlg.path):
-        #         self.model.load_file(dlg.path)
+        if config.DEBUG:
+            self.model.load_file(config.DEBUG_PATH)
+        else:
+            dlg = FileDialog(action='open', default_directory=config.default_data_dir)
+            if dlg.open() == 'OK':
+                if os.path.isfile(dlg.path):
+                    self.model.load_file(dlg.path)
 
     def apply_offset(self, info):
         if not self.model.has_selection():
@@ -63,18 +98,20 @@ class WellpyController(Controller):
             self.model.apply_offset(self.offset)
 
     def traits_view(self):
-        actions = [Action(name='Open CSV...', action='open_csv')]
+        actions = [Action(name='Open Excel...', action='open_csv')]
         menu = MenuManager(*actions, name='File')
         menubar = MenuBarManager(menu)
 
-        actions = [Action(name='Open CSV', action='open_csv'),
-                   Action(name='Apply Offset', action='apply_offset')]
+        actions = [Action(name='Open Excel', action='open_csv'),
+                   Action(name='Apply Offset', action='apply_offset'),
+                   Action(name='Import DB', action='import_db'),
+                   Action(name='Configure DB', action='configure_db')]
         toolbar = ToolBarManager(*actions)
 
         v = View(UItem('plot_container', style='custom', editor=ComponentEditor()),
                  menubar=menubar, resizable=True,
                  toolbar=toolbar,
-                 title = self.title,
+                 title='Wellpy',
                  width=800,
                  height=650)
         return v

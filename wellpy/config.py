@@ -28,21 +28,40 @@ def write_default(p):
     obj = {'default_data_dir': os.path.expanduser('~')}
 
     with open(p, 'w') as wfile:
-        yaml.dump(obj, wfile)
+        yaml.dump(obj, wfile, default_flow_style=False)
 
 
 class Config:
+    DEBUG_PATH = '/Users/ross/Programming/github/wellpy/data/AR0209_AztecMW.xlsx'
+    DEBUG = True
+    _d = None
+
     def __init__(self):
-        root = os.path.join(HOME, '.csvplotter')
+        root = os.path.join(HOME, '.wellpy')
         if not os.path.isdir(root):
             os.mkdir(root)
 
-        p = os.path.join(root, 'config.yaml')
-        if not os.path.isfile(p) or True:
+        p = self.path
+        if not os.path.isfile(p):
             write_default(p)
+        self.load()
 
-        with open(p, 'r') as rfile:
+    @property
+    def path(self):
+        root = os.path.join(HOME, '.wellpy')
+        p = os.path.join(root, 'config.yaml')
+        return p
+
+    def load(self):
+        with open(self.path, 'r') as rfile:
             self._d = yaml.load(rfile)
+
+    def dump(self):
+        with open(self.path, 'w') as wfile:
+            yaml.dump(self._d, wfile, default_flow_style=False)
+
+    def set_value(self, key, value):
+        self._d[key] = value
 
     def __getattr__(self, item):
         return self._d.get(item)

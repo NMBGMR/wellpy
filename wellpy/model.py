@@ -14,10 +14,6 @@
 # limitations under the License.
 # ===============================================================================
 
-# ============= enthought library imports =======================
-# ============= standard library imports ========================
-# ============= local library imports  ==========================
-
 from chaco.axis import PlotAxis
 from chaco.plot_containers import VPlotContainer
 from chaco.tools.api import ZoomTool
@@ -29,7 +25,9 @@ from traits.api import HasTraits, Instance
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
 
+from wellpy.config import config
 from wellpy.data_model import DataModel
+from wellpy.nm_well_database import NMWellDatabase
 
 
 class NoSelectionError(BaseException):
@@ -42,6 +40,21 @@ class WellpyModel(HasTraits):
     _series = None
     _plots = None
     data_model = Instance(DataModel)
+
+    def import_db(self):
+        db = NMWellDatabase()
+        if db.connect(config.db_host,
+                      config.db_user,
+                      config.db_password,
+                      config.db_name):
+
+            # do database import here
+            record = self._gather_db_record()
+            db.add_record(record)
+
+            return True, db.url
+        else:
+            return False, db.url
 
     def apply_offset(self, v):
         mask = self._series[0].index.metadata['selection_masks'][0]
@@ -120,6 +133,10 @@ class WellpyModel(HasTraits):
 
     def has_selection(self):
         return bool(self._tool.selection)
+
+    # private
+    def _gather_db_record(self):
+        raise NotImplementedError
 
     def _add_range_selection(self, series, listeners=None):
         series.active_tool = tool = RangeSelection(series, left_button_selects=True)
