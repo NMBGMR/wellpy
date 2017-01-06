@@ -20,18 +20,16 @@
 import os
 import sys
 
-from wellpy.controller import WellpyController
-from wellpy.model import WellpyModel
-
 pp = os.path.dirname(os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.getcwd(), pp))
 
+from wellpy.controller import WellpyController
+from wellpy.model import WellpyModel
+
 
 def main():
-    model_klass = WellpyModel
-    controller_klass = WellpyController
-    model = model_klass()
-    ctl = controller_klass(model=model)
+    model = WellpyModel()
+    ctl = WellpyController(model=model)
     ctl.configure_traits()
 
 

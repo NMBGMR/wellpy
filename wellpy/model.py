@@ -28,6 +28,7 @@ from chaco.scales_tick_generator import ScalesTickGenerator
 from wellpy.config import config
 from wellpy.data_model import DataModel
 from wellpy.nm_well_database import NMWellDatabase
+from wellpy.tools import DataTool, DataToolOverlay
 
 
 class NoSelectionError(BaseException):
@@ -46,7 +47,8 @@ class WellpyModel(HasTraits):
         if db.connect(config.db_host,
                       config.db_user,
                       config.db_password,
-                      config.db_name):
+                      config.db_name,
+                      config.db_login_timeout):
 
             # do database import here
             record = self._gather_db_record()
@@ -61,6 +63,8 @@ class WellpyModel(HasTraits):
         self.data_model.apply_offset('water_head', v, mask)
         self.plot_container.invalidate_and_redraw()
         self._plots['water_head'].data.set_data('water_head', self.data_model.water_head)
+        # self._series[0].index.metadata['selection_masks'][0] = []
+        self._tool.deselect()
 
     def load_file(self, p):
         data = DataModel(p)
@@ -95,6 +99,16 @@ class WellpyModel(HasTraits):
             plot.plot(('x', a),
                       marker_size=1.5,
                       type='scatter')
+
+            dt = DataTool(plot=series, component=plot,
+                          normalize_time=False,
+                          use_date_str=True)
+            dto = DataToolOverlay(
+                component=series,
+                tool=dt)
+            series.tools.append(dt)
+            series.overlays.append(dto)
+
             plot.y_axis.title = title
             if i != 0:
                 plot.x_axis.visible = False
@@ -112,7 +126,7 @@ class WellpyModel(HasTraits):
                 self._tool = tool
 
                 series.tools.append(tool)
-                series.active_tool = tool
+                # series.active_tool = tool
                 # plot.x_axis.title = 'Time'
                 bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
                                        tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))

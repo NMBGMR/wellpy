@@ -25,7 +25,7 @@ from pyface.confirmation_dialog import confirm
 from pyface.constant import YES
 from pyface.file_dialog import FileDialog
 from pyface.message_dialog import warning, information
-from traits.api import Instance, Button, Float, Str, HasTraits, Password
+from traits.api import Instance, Button, Float, Str, HasTraits, Password, CInt
 from traitsui.api import Controller, View, UItem, Item, VGroup
 from traitsui.menu import Action
 
@@ -45,12 +45,14 @@ class WellpyController(Controller):
             user = Str
             host = Str
             password = Password
+            login_timeout = CInt
 
         v = View(VGroup(Item('host', label='Server', tooltip='Database Server IP address e.g., 192.168.0.1'),
                         Item('user', label='Username', tooltip='Username for connecting to database'),
                         Item('password', tooltip='Password for connecting to database'),
-                        Item('name', tooltip='Name of database')),
-                 buttons=['OK','Cancel'],
+                        Item('name', tooltip='Name of database'),
+                        Item('login_timeout', tooltip='Login timeout in seconds')),
+                 buttons=['OK', 'Cancel'],
                  width=300,
                  kind='livemodal',
                  title='Edit Database Connection')
@@ -60,10 +62,14 @@ class WellpyController(Controller):
         for a in attrs:
             setattr(c, a, getattr(config, 'db_{}'.format(a)) or '')
 
+        setattr(c, 'login_timeout', getattr(config, 'db_login_timeout') or 3)
+
         info = c.edit_traits(view=v)
         if info.result:
             for a in attrs:
                 config.set_value('db_{}'.format(a), str(getattr(c, a)))
+
+            config.set_value('db_login_timeout', getattr(c, 'login_timeout'))
             config.dump()
             config.load()
 
@@ -104,8 +110,9 @@ class WellpyController(Controller):
 
         actions = [Action(name='Open Excel', action='open_csv'),
                    Action(name='Apply Offset', action='apply_offset'),
+                   Action(name='Configure DB', action='configure_db'),
                    Action(name='Import DB', action='import_db'),
-                   Action(name='Configure DB', action='configure_db')]
+                   ]
         toolbar = ToolBarManager(*actions)
 
         v = View(UItem('plot_container', style='custom', editor=ComponentEditor()),

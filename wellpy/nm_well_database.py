@@ -32,11 +32,12 @@ class NMWellDatabase:
     url = ''
     _connection = None
 
-    def connect(self, host, user, pwd, name):
+    def connect(self, host, user, pwd, name, login_timeout=5):
         self.url = '{}@{}/{}'.format(user, host, name)
+        print login_timeout
         try:
             self._connection = pymssql.connect(host, user, pwd, name,
-                                               login_timeout=5)
+                                               login_timeout=login_timeout)
             return True
         except BaseException:
             return False
