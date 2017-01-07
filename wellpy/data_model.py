@@ -17,7 +17,7 @@ import os
 
 import time
 
-from numpy import empty
+from numpy import empty, polyfit, polyval
 from openpyxl import load_workbook
 
 
@@ -32,6 +32,16 @@ class DataModel:
         self._path = path
         if os.path.isfile(path):
             self._load(path)
+
+    def apply_linear(self, attr, s, e, mask):
+        v = getattr(self, attr)
+        ys = v[mask]
+        xs = self.x[mask]
+
+        fxs = (xs[0], xs[-1])
+        fys = (ys[0], ys[-1])
+        coeffs = polyfit(fxs, fys, 1)
+        v[mask] = polyval(coeffs, xs)
 
     def apply_offset(self, attr, offset, mask):
         v = getattr(self, attr)

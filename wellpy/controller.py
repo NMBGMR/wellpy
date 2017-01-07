@@ -25,7 +25,7 @@ from pyface.confirmation_dialog import confirm
 from pyface.constant import YES
 from pyface.file_dialog import FileDialog
 from pyface.message_dialog import warning, information
-from traits.api import Instance, Button, Float, Str, HasTraits, Password, CInt
+from traits.api import Instance, Button, Float, Str, HasTraits, Password, CInt, Enum
 from traitsui.api import Controller, View, UItem, Item, VGroup
 from traitsui.menu import Action
 
@@ -38,6 +38,7 @@ class WellpyController(Controller):
     apply_offset = Button
     offset = Float
     title = Str
+    offset_kind = Enum('Linear','Constant')
 
     def configure_db(self, info):
         class Connection(HasTraits):
@@ -95,13 +96,14 @@ class WellpyController(Controller):
             if ret != YES:
                 return
 
-        v = View(Item('controller.offset'),
+        v = View(Item('controller.offset_kind', label='Kind'),
+                 Item('controller.offset', enabled_when='kind="Constant"'),
                  title='Set Offset',
                  buttons=['OK', 'Cancel'],
                  kind='livemodal')
         info = self.edit_traits(view=v)
         if info.result:
-            self.model.apply_offset(self.offset)
+            self.model.apply_offset(self.offset_kind, self.offset)
 
     def traits_view(self):
         actions = [Action(name='Open Excel...', action='open_csv')]

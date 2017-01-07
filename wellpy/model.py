@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-
 from chaco.axis import PlotAxis
 from chaco.plot_containers import VPlotContainer
 from chaco.tools.api import ZoomTool
@@ -24,6 +23,7 @@ from chaco.tools.range_selection_overlay import RangeSelectionOverlay
 from traits.api import HasTraits, Instance
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
+from numpy import array
 
 from wellpy.config import config
 from wellpy.data_model import DataModel
@@ -33,6 +33,9 @@ from wellpy.tools import DataTool, DataToolOverlay
 
 class NoSelectionError(BaseException):
     pass
+
+WATER_HEAD = 'water_head'
+ADJ_WATER_HEAD = 'adjusted_water_head'
 
 
 class WellpyModel(HasTraits):
@@ -58,13 +61,16 @@ class WellpyModel(HasTraits):
         else:
             return False, db.url
 
-    def apply_offset(self, v):
-        mask = self._series[0].index.metadata['selection_masks'][0]
-        self.data_model.apply_offset('water_head', v, mask)
+    def apply_offset(self, kind, v):
+        if kind.lower() == 'constant':
+            self._apply_constant_offset(v)
+        else:
+            self._apply_linear_interpolation()
+
         self.plot_container.invalidate_and_redraw()
-        self._plots['water_head'].data.set_data('water_head', self.data_model.water_head)
-        # self._series[0].index.metadata['selection_masks'][0] = []
+        self._plots[ADJ_WATER_HEAD].data.set_data(ADJ_WATER_HEAD, self.data_model.adjusted_water_head)
         self._tool.deselect()
+        self._series[0].index.metadata['selection_masks'] = None
 
     def load_file(self, p):
         data = DataModel(p)
@@ -81,12 +87,14 @@ class WellpyModel(HasTraits):
         for i, (a, title) in enumerate((('water_head', 'Head'),
                                         ('adjusted_water_head', 'Adj. Head'),
 
-                                        ('temp', 'Temp.'),
-                                        ('water_level_elevation', 'Elev.'))):
+                                        # ('temp', 'Temp.'),
+                                        # ('water_level_elevation', 'Elev.')
+                                        )):
             plot = Plot(data=ArrayPlotData(**{'x': data.x, a: getattr(data, a)}),
                         padding=[70, 10, 10, 10],
-                        resizable='h',
-                        bounds=(1, 125))
+                        # resizable='h',
+                        # bounds=(1, 125)
+                        )
 
             if index is None:
                 index = plot.index_mapper
@@ -117,7 +125,7 @@ class WellpyModel(HasTraits):
                 zoom = ZoomTool(plot, tool_mode="range",
                                 axis='index',
                                 color=(0, 1, 0, 0.5),
-
+                                enable_wheel=False,
                                 always_on=False)
                 plot.overlays.append(zoom)
 
@@ -142,13 +150,31 @@ class WellpyModel(HasTraits):
         container.invalidate_and_redraw()
 
     def set_value_selection(self, v):
-        for s in self._series:
-            s.index.metadata['selections'] = v
+        if v is None:
+            v = array([])
+
+        # for s in self._series:
+        #     s.index.metadata['selections'] = v
 
     def has_selection(self):
-        return bool(self._tool.selection)
+        if isinstance(self._tool.selection, tuple):
+            return bool(self._tool.selection)
+        else:
+            return self._tool.selection.any()
+            # return self._tool.selection and self._tool.selection.any()
 
     # private
+    def _apply_constant_offset(self, v):
+        mask = self._series[0].index.metadata['selection_masks'][0]
+        self.data_model.apply_offset(ADJ_WATER_HEAD, v, mask)
+
+    def _apply_linear_interpolation(self):
+
+        mask = self._series[0].index.metadata['selection_masks'][0]
+        s,e = self._series[0].index.metadata['selections']
+
+        self.data_model.apply_linear(ADJ_WATER_HEAD, s, e, mask)
+
     def _gather_db_record(self):
         raise NotImplementedError
 

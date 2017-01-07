@@ -64,8 +64,11 @@ class DataTool(BaseTool):
 
             if self.use_date_str:
                 # convert timestamp to str
-                date = datetime.fromtimestamp(x)
-                xi = date.strftime('%d/%m %H:%M:%S')
+                try:
+                    date = datetime.fromtimestamp(x)
+                    xi = date.strftime('%d/%m %H:%M:%S')
+                except ValueError:
+                    xi = 'NaN'
             else:
                 xi = self.x_format.format(x)
 
