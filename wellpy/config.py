@@ -33,6 +33,7 @@ def write_default(p):
 
 class Config:
     DEBUG_PATH = '/Users/ross/Programming/github/wellpy/data/AR0209_AztecMW.xlsx'
+    DEBUG_PATH = '/Users/ross/Sandbox/wellpydata/1_mg-030_danielson_wel_170118081630_D7259.csv'
     DEBUG = True
     _d = None
 

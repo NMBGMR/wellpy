@@ -110,7 +110,7 @@ class WellpyController(Controller):
         menu = MenuManager(*actions, name='File')
         menubar = MenuBarManager(menu)
 
-        actions = [Action(name='Open Excel', action='open_csv'),
+        actions = [Action(name='Open CSV', action='open_csv'),
                    Action(name='Apply Offset', action='apply_offset'),
                    Action(name='Configure DB', action='configure_db'),
                    Action(name='Import DB', action='import_db'),

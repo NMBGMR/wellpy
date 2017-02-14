@@ -17,7 +17,8 @@ import os
 
 import time
 
-from numpy import empty, polyfit, polyval
+from datetime import datetime
+from numpy import empty, polyfit, polyval, array
 from openpyxl import load_workbook
 
 
@@ -48,6 +49,43 @@ class DataModel:
         v[mask] += offset
 
     def _load(self, p):
+        if p.endswith('.csv'):
+            self._load_csv(p)
+        else:
+            self._load_xls(p)
+
+    def _load_csv(self, p):
+        delimiter = ','
+        x = []
+        ws = []
+        with open(p, 'r') as rfile:
+            for i, line in enumerate(rfile):
+                if i < 53:
+                    continue
+                line = line.strip()
+                try:
+                    date, water_head, temp = line.split(delimiter)
+                except ValueError:
+                    if line.startswith('END OF DATA'):
+                        break
+                    continue
+
+                try:
+                    water_head = float(water_head)
+                except TypeError:
+                    continue
+
+                date = datetime.strptime(date, '%Y/%m/%d %H:%M:%S')
+                x.append(time.mktime(date.timetuple()))
+                ws.append(water_head)
+
+        self.x = array(x)
+
+        ws = array(ws)
+        self.water_head = ws
+        self.adjusted_water_head = ws[:]
+
+    def _load_xls(self, p):
         wb = load_workbook(p, data_only=True)
         sheet = wb[wb.sheetnames[0]]
 
@@ -101,4 +139,5 @@ class DataModel:
         self.water_head = wh
         self.adjusted_water_head = awh
         self.water_level_elevation = wle
+
 # ============= EOF =============================================
