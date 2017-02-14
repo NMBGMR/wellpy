@@ -13,10 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
+import os
+
 from enable.component_editor import ComponentEditor
+from pyface.constant import OK
+from pyface.file_dialog import FileDialog
 from pyface.tasks.traits_dock_pane import TraitsDockPane
 from pyface.tasks.traits_task_pane import TraitsTaskPane
-from traitsui.api import View, UItem, TabularEditor, Item
+from traits.api import Button
+from traitsui.api import View, UItem, TabularEditor, Item, HGroup
 from traitsui.tabular_adapter import TabularAdapter
 
 
@@ -34,10 +39,20 @@ class WellCentralPane(TraitsTaskPane):
 class WellPane(TraitsDockPane):
     id = 'wellpy.well.pane'
     name = 'Point IDs'
+    open_file_button = Button('Open')
+
+    def _open_file_button_fired(self):
+        dlg = FileDialog(action='open')
+        if dlg.open() == OK:
+            if os.path.isfile(dlg.path):
+                self.model.path = dlg.path
+                self.model.model.load_file(dlg.path)
 
     def traits_view(self):
-        v = View(UItem('point_id_entry'),
+        v = View(HGroup(UItem('filename', style='readonly'), UItem('pane.open_file_button')),
+                 UItem('point_id_entry'),
                  UItem('filtered_point_ids',
                        editor=TabularEditor(adapter=PointIDAdapter())))
         return v
+
 # ============= EOF =============================================

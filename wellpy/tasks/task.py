@@ -13,11 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
+import os
+
 from chaco.plot_containers import VPlotContainer
 from pyface.tasks.action.schema import SMenu, SMenuBar
 from pyface.tasks.action.task_action import TaskAction
 from pyface.tasks.task_layout import PaneItem, TaskLayout
-from traits.api import List, Str, HasTraits, Instance, Property
+from traits.api import List, Str, HasTraits, Instance, Property, Button
 from pyface.tasks.task import Task
 from traitsui.menu import Action
 
@@ -38,11 +40,15 @@ class WellpyTask(Task):
     filtered_point_ids = Property(depends_on='point_id_entry')
 
     selected_point_id = Instance(PointIDRecord)
-    menu_bar = SMenuBar(SMenu(TaskAction(name='Open...', method='open',
-                                         accelerator='Ctrl+O'),
-                              TaskAction(name='Save', method='save',
-                                         accelerator='Ctrl+S'),
-                              id='File', name='&File'))
+    # menu_bar = SMenuBar(SMenu(TaskAction(name='Open...', method='open',
+    #                                      accelerator='Ctrl+O'),
+    #                           TaskAction(name='Save', method='save',
+    #                                      accelerator='Ctrl+S'),
+    #                           id='File', name='&File'))
+    #
+    path = Str
+    filename = Property(depends_on='path')
+
     model = Instance(WellpyModel, ())
     db = Instance(DatabaseConnector, ())
 
@@ -63,6 +69,9 @@ class WellpyTask(Task):
 
     def create_dock_panes(self):
         return [WellPane(model=self)]
+
+    def _get_filename(self):
+        return os.path.basename(self.path)
 
     def _get_filtered_point_ids(self):
         return [p for p in self.point_ids if p.name.startswith(self.point_id_entry)]
