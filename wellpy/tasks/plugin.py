@@ -24,19 +24,7 @@ from traitsui.menu import Action
 from wellpy.tasks.task import WellpyTask
 
 
-class ResetLayoutAction(Action):
-    name = 'Reset Layout'
-    # image = icon('view-restore')
 
-    def perform(self, event):
-        event.task.window.reset_layout()
-
-
-class OpenWellAction(Action):
-    name = 'OpenWell'
-
-    def perform(self, event):
-        print event.window.application
 
 
 class WellpyPlugin(Plugin):
@@ -45,19 +33,25 @@ class WellpyPlugin(Plugin):
     tasks = List(contributes_to='envisage.ui.tasks.tasks')
     # service_offers = List(contributes_to='envisage.service_offers')
     # available_task_extensions = List(contributes_to='pychron.available_task_extensions')
-    task_extensions = List(contributes_to='envisage.ui.tasks.task_extensions')
+    # task_extensions = List(contributes_to='envisage.ui.tasks.task_extensions')
     # my_task_extensions = List(contributes_to='envisage.ui.tasks.task_extensions')
 
-    def _task_extensions_default(self):
-        ext=[]
-        ext.append(TaskExtension(actions=[SchemaAddition(id='Reset Layout',
-                                                         path='MenuBar/File',
-                                                         factory=ResetLayoutAction)]))
-            # SchemaAddition(id='file', factory=lambda: SMenu(id='file.menu', name='File')),
-            # SchemaAddition(id='Open',
-            #                factory=OpenWellAction,
-            #                path='MenuBar/file.menu/Open')]))
-        return ext
+    # def _task_extensions_default(self):
+    #     ext=[]
+    #     ext.append(TaskExtension(actions=[SchemaAddition(id='Reset Layout',
+    #                                                      path='MenuBar/File',
+    #                                                      factory=ResetLayoutAction),
+    #
+    #                                       SchemaAddition(id='File',
+    #                                                      path='MenuBar',
+    #                                                      factory=lambda: SMenu(id='File',
+    #                                                                            name='File'))
+    #                                       ]))
+    #     print ext
+    #         # SchemaAddition(id='Open',
+    #         #                factory=OpenWellAction,
+    #         #                path='MenuBar/file.menu/Open')]))
+    #     return ext
 
     def _tasks_default(self):
         return [TaskFactory(id='wellpy.task',

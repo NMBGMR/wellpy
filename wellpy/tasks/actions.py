@@ -13,7 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
+from traitsui.menu import Action
 
-DATABSE_DEBUG = True
-FILE_DEBUG = '/Users/ross/Sandbox/wellpydata/1_mg-030_danielson_wel_170118081630_D7259.csv'
+
+class ResetLayoutAction(Action):
+    name = 'Reset Layout'
+    # image = icon('view-restore')
+
+    def perform(self, event):
+        event.task.window.reset_layout()
+
+
+class OpenWellAction(Action):
+    name = 'OpenWell'
+
+    def perform(self, event):
+        print event.window.application
 # ============= EOF =============================================

@@ -18,7 +18,7 @@ import os
 import time
 
 from datetime import datetime
-from numpy import empty, polyfit, polyval, array
+from numpy import empty, polyfit, polyval, array, where, diff
 from openpyxl import load_workbook
 
 
@@ -29,25 +29,39 @@ class Channel:
 
 
 class DataModel:
+    adjusted_water_head = None
+    water_head = None
+    filtered_zeros = None
+
     def __init__(self, path):
         self._path = path
         if os.path.isfile(path):
             self._load(path)
 
-    def apply_linear(self, attr, s, e, mask):
-        v = getattr(self, attr)
-        ys = v[mask]
-        xs = self.x[mask]
+    def get_water_head(self):
+        return array(self._water_head)
 
-        fxs = (xs[0], xs[-1])
-        fys = (ys[0], ys[-1])
-        coeffs = polyfit(fxs, fys, 1)
-        v[mask] = polyval(coeffs, xs)
+    def fix_data(self, ys, threshold):
+        x = self.x
 
-    def apply_offset(self, attr, offset, mask):
-        v = getattr(self, attr)
-        v[mask] += offset
+        # find zeros
+        zs = where(ys == 0)[0]
+        fs = []
+        while 1:
+            idxs = where(abs(diff(ys)) > threshold)[0]
+            if not idxs.any():
+                break
 
+            offset = ys[idxs[0]] - ys[idxs[0] + 1]
+
+            sidx, eidx = idxs[0] + 1, idxs[1] + 1
+            sx, ex = x[sidx], x[eidx]
+            fs.append((offset, sidx, eidx, sx, ex))
+            ys[idxs[0] + 1:idxs[1] + 1] += offset
+
+        return ys, zs, fs
+
+    # private
     def _load(self, p):
         if p.endswith('.csv'):
             self._load_csv(p)
@@ -81,9 +95,10 @@ class DataModel:
 
         self.x = array(x)
 
-        ws = array(ws)
-        self.water_head = ws
-        self.adjusted_water_head = ws[:]
+        # ws = array(ws)
+        self._water_head = ws
+        self.water_head = array(ws)
+        self.adjusted_water_head = array(ws)
 
     def _load_xls(self, p):
         wb = load_workbook(p, data_only=True)
@@ -140,4 +155,18 @@ class DataModel:
         self.adjusted_water_head = awh
         self.water_level_elevation = wle
 
-# ============= EOF =============================================
+        # ============= EOF =============================================
+        # def apply_linear(self, attr, s, e, mask):
+        #     v = getattr(self, attr)
+        #     ys = v[mask]
+        #     xs = self.x[mask]
+        #
+        #     fxs = (xs[0], xs[-1])
+        #     fys = (ys[0], ys[-1])
+        #     coeffs = polyfit(fxs, fys, 1)
+        #     v[mask] = polyval(coeffs, xs)
+        #
+        #
+        # def apply_offset(self, attr, offset, mask):
+        #     v = getattr(self, attr)
+        #     v[mask] += offset

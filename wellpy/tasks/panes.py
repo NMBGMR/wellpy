@@ -20,9 +20,11 @@ from pyface.constant import OK
 from pyface.file_dialog import FileDialog
 from pyface.tasks.traits_dock_pane import TraitsDockPane
 from pyface.tasks.traits_task_pane import TraitsTaskPane
-from traits.api import Button
-from traitsui.api import View, UItem, TabularEditor, Item, HGroup
+from traits.api import Button, Float, Property
+from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring
 from traitsui.tabular_adapter import TabularAdapter
+
+from globals import FILE_DEBUG
 
 
 class PointIDAdapter(TabularAdapter):
@@ -36,23 +38,91 @@ class WellCentralPane(TraitsTaskPane):
         return v
 
 
-class WellPane(TraitsDockPane):
-    id = 'wellpy.well.pane'
-    name = 'Point IDs'
-    open_file_button = Button('Open')
+class ToolboxPane(TraitsDockPane):
+    id = 'wellpy.toolbox.pane'
+    name = 'Toolbox'
+    fix_data_button = Button('Fix Data')
+    constant_offset = Float
+    threshold = Float(1)
 
-    def _open_file_button_fired(self):
-        dlg = FileDialog(action='open')
-        if dlg.open() == OK:
-            if os.path.isfile(dlg.path):
-                self.model.path = dlg.path
-                self.model.model.load_file(dlg.path)
+    def _constant_offset_changed(self, new):
+        self.model.apply_constant_offset(new)
+
+    def _fix_data_button_fired(self):
+        self.model.fix_data(self.threshold)
 
     def traits_view(self):
-        v = View(HGroup(UItem('filename', style='readonly'), UItem('pane.open_file_button')),
-                 UItem('point_id_entry'),
-                 UItem('filtered_point_ids',
-                       editor=TabularEditor(adapter=PointIDAdapter())))
+        manual_grp = VGroup(Item('pane.constant_offset', label='Constant Offset'),
+                            show_border=True, label='Manual')
+        auto_grp = VGroup(Item('pane.threshold', label='Threshold'),
+                          UItem('pane.fix_data_button'),
+                          show_border=True, label='Auto')
+
+        v = View(VGroup(manual_grp, auto_grp))
+        return v
+
+
+class AutoResultsTabularAdapter(TabularAdapter):
+    columns = [('Start', 'start'),
+               ('End','end'),
+               ('Offset', 'offset')]
+
+    # start_text = Property
+    # def _get_start_text(self):
+    #     return self.item.start.isoformat()
+
+
+class AutoResultsPane(TraitsDockPane):
+    id = 'wellpy.autoresults.pane'
+    name='AutoResults'
+
+    def traits_view(self):
+        v = View(UItem('auto_results', editor=TabularEditor(adapter=AutoResultsTabularAdapter())))
+        return v
+
+
+class WellPane(TraitsDockPane):
+    id = 'wellpy.well.pane'
+    name = 'Well'
+    open_file_button = Button('Open')
+    retrieve_manual_button = Button('Retrieve')
+
+    def _retrieve_manual_button_fired(self):
+        self.model.retrieve_manual()
+
+    def _open_file_button_fired(self):
+
+        if FILE_DEBUG:
+            self.model.path = FILE_DEBUG
+            self.model.load_file(FILE_DEBUG)
+        else:
+            dlg = FileDialog(action='open', default_directory=os.path.expanduser('~'))
+
+            if dlg.open() == OK:
+                if os.path.isfile(dlg.path):
+                    self.model.path = dlg.path
+                    self.model.load_file(dlg.path)
+
+    def traits_view(self):
+        site_grp = VGroup(UItem('point_id_entry'),
+                          UItem('filtered_point_ids',
+                                editor=TabularEditor(selected='selected_point_id',
+                                                     editable=False,
+                                                     adapter=PointIDAdapter())),
+                          UItem('pane.retrieve_manual_button',
+                                enabled_when='selected_point_id'),
+                          show_border=True,
+                          label='Site')
+        df_grp = HGroup(UItem('filename', style='readonly'),
+                        spring,
+                        UItem('pane.open_file_button'),
+                        show_border=True,
+                        label='Diver File')
+
+        metadata_grp = VGroup(show_border=True, label='Metadata')
+
+        v = View(VGroup(df_grp, site_grp, metadata_grp))
+
         return v
 
 # ============= EOF =============================================

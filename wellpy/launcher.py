@@ -31,8 +31,8 @@ def launch():
     root.addHandler(shandler)
 
     plugins = [CorePlugin(),
-               TasksPlugin(),
-               WellpyPlugin()]
+               WellpyPlugin(),
+               TasksPlugin()]
 
     app = WellpyApplication(plugins=plugins)
 

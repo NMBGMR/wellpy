@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
+import os
 from chaco.axis import PlotAxis
 from chaco.plot_containers import VPlotContainer
 from chaco.tools.api import ZoomTool
@@ -20,22 +21,43 @@ from chaco.array_plot_data import ArrayPlotData
 from chaco.plot import Plot
 from chaco.tools.range_selection import RangeSelection
 from chaco.tools.range_selection_overlay import RangeSelectionOverlay
-from traits.api import HasTraits, Instance
+from datetime import datetime
+from traits.api import HasTraits, Instance, Float, List, Property, Str, Button
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
-from numpy import array
+from numpy import array, diff, where
 
+from globals import DATABSE_DEBUG
 from wellpy.config import config
 from wellpy.data_model import DataModel
+from wellpy.database_connector import DatabaseConnector
 from wellpy.nm_well_database import NMWellDatabase
+from wellpy.range_overlay import RangeOverlay
 from wellpy.tools import DataTool, DataToolOverlay
 
 
 class NoSelectionError(BaseException):
     pass
 
+
 WATER_HEAD = 'water_head'
 ADJ_WATER_HEAD = 'adjusted_water_head'
+MANUAL_MEASUREMENTS = 'manual'
+
+
+class PointIDRecord(HasTraits):
+    name = Str
+
+
+class AutoResult(HasTraits):
+    start = None
+    end = None
+    offset = Float
+
+    def __init__(self, offset, sidx, eidx, s, e):
+        self.offset = offset
+        self.start = datetime.fromtimestamp(s)
+        self.end = datetime.fromtimestamp(e)
 
 
 class WellpyModel(HasTraits):
@@ -45,34 +67,68 @@ class WellpyModel(HasTraits):
     _plots = None
     data_model = Instance(DataModel)
 
-    def import_db(self):
-        db = NMWellDatabase()
-        if db.connect(config.db_host,
-                      config.db_user,
-                      config.db_password,
-                      config.db_name,
-                      config.db_login_timeout):
+    point_id_entry = Str
+    point_ids = List
+    filtered_point_ids = Property(depends_on='point_id_entry')
+    selected_point_id = Instance(PointIDRecord)
+    path = Str
+    filename = Property(depends_on='path')
 
-            # do database import here
-            record = self._gather_db_record()
-            db.add_record(record)
+    auto_results = List
+    db = Instance(DatabaseConnector, ())
 
-            return True, db.url
-        else:
-            return False, db.url
+    def activated(self):
+        pids = self.db.get_point_ids()
+        if DATABSE_DEBUG:
+            pids = ['A', 'B', 'C']
 
-    def apply_offset(self, kind, v):
-        if kind.lower() == 'constant':
-            self._apply_constant_offset(v)
-        else:
-            self._apply_linear_interpolation()
+        self.point_ids = [PointIDRecord(name=p) for p in pids]
+
+    def retrieve_manual(self):
+        """
+        retrieve the manual measurements from database for selected_pointID
+        :return:
+        """
+
+        pid = self.selected_point_id
+        ms = self.db.get_manual_measurements(pid)
+
+        def factory(mm):
+            pass
+
+        xs, ys = array([factory(mi) for mi in ms]).T
+        plot = self._plots[MANUAL_MEASUREMENTS]
+
+
+    def fix_data(self, threshold):
+        """
+        automatically remove offsets and zeros
+        :param threshold:
+        :return:
+        """
+        ys = self.data_model.get_water_head()
+        ys, zs, fs = self.data_model.fix_data(ys, threshold)
+        self.auto_results = [AutoResult(*fi) for fi in fs]
+
+        # plot fixed ranges on raw plot
+        plot = self._plots[WATER_HEAD]
+        plot.auto_fixed_range_overlay.ranges = fs
+
+        # update adjusted head
+        self.data_model.adjusted_water_head = ys
+        plot = self._plots[ADJ_WATER_HEAD]
+        plot.data.set_data(ADJ_WATER_HEAD, ys)
 
         self.plot_container.invalidate_and_redraw()
-        self._plots[ADJ_WATER_HEAD].data.set_data(ADJ_WATER_HEAD, self.data_model.adjusted_water_head)
-        self._tool.deselect()
-        self._series[0].index.metadata['selection_masks'] = None
 
     def load_file(self, p):
+        """
+        load data from a file.
+
+        create a new DataModel object and initialize a plot
+        :param p:
+        :return:
+        """
         data = DataModel(p)
         self.data_model = data
         self.initialize_plot()
@@ -84,17 +140,13 @@ class WellpyModel(HasTraits):
         self._series = []
         self._plots = {}
         index, rr = None, None
-        for i, (a, title) in enumerate((('water_head', 'Head'),
-                                        ('adjusted_water_head', 'Adj. Head'),
-
+        for i, (a, title) in enumerate((('adjusted_water_head', 'Adj. Head'),
+                                        ('water_head', 'Head'),
                                         # ('temp', 'Temp.'),
                                         # ('water_level_elevation', 'Elev.')
                                         )):
             plot = Plot(data=ArrayPlotData(**{'x': data.x, a: getattr(data, a)}),
-                        padding=[70, 10, 10, 10],
-                        # resizable='h',
-                        # bounds=(1, 125)
-                        )
+                        padding=[70, 10, 10, 10])
 
             if index is None:
                 index = plot.index_mapper
@@ -129,11 +181,11 @@ class WellpyModel(HasTraits):
                                 always_on=False)
                 plot.overlays.append(zoom)
 
-                tool = RangeSelection(series, left_button_selects=True,
-                                      listeners=[self])
-                self._tool = tool
-
-                series.tools.append(tool)
+                # tool = RangeSelection(series, left_button_selects=True,
+                #                       listeners=[self])
+                # self._tool = tool
+                #
+                # series.tools.append(tool)
                 # series.active_tool = tool
                 # plot.x_axis.title = 'Time'
                 bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
@@ -147,47 +199,97 @@ class WellpyModel(HasTraits):
             self._series.append(series)
             self._plots[a] = plot
 
+        # add overlays
+        plot = self._plots[WATER_HEAD]
+        o = RangeOverlay(plot=plot)
+        plot.auto_fixed_range_overlay = o
+        plot.overlays.append(o)
+
         container.invalidate_and_redraw()
-
-    def set_value_selection(self, v):
-        if v is None:
-            v = array([])
-
-        # for s in self._series:
-        #     s.index.metadata['selections'] = v
-
-    def has_selection(self):
-        if isinstance(self._tool.selection, tuple):
-            return bool(self._tool.selection)
-        else:
-            return self._tool.selection.any()
-            # return self._tool.selection and self._tool.selection.any()
-
-    # private
-    def _apply_constant_offset(self, v):
-        mask = self._series[0].index.metadata['selection_masks'][0]
-        self.data_model.apply_offset(ADJ_WATER_HEAD, v, mask)
-
-    def _apply_linear_interpolation(self):
-
-        mask = self._series[0].index.metadata['selection_masks'][0]
-        s,e = self._series[0].index.metadata['selections']
-
-        self.data_model.apply_linear(ADJ_WATER_HEAD, s, e, mask)
-
-    def _gather_db_record(self):
-        raise NotImplementedError
-
-    def _add_range_selection(self, series, listeners=None):
-        series.active_tool = tool = RangeSelection(series, left_button_selects=True)
-        if listeners:
-            tool.listeners = listeners
-
-        series.overlays.append(RangeSelectionOverlay(component=series))
-        return tool
 
     def _plot_container_default(self):
         pc = VPlotContainer()
         return pc
 
-# ============= EOF =============================================
+    # property get/set
+    def _get_filtered_point_ids(self):
+        return [p for p in self.point_ids if p.name.startswith(self.point_id_entry)]
+
+    def _get_filename(self):
+        return os.path.basename(self.path)
+        # ============= EOF =============================================
+        # def apply_constant_offset(self, v):
+        #     self.fix_data()
+        #
+        #     if self._apply_constant_offset(v):
+        #         self.plot_container.invalidate_and_redraw()
+        #         self._plots[ADJ_WATER_HEAD].data.set_data(ADJ_WATER_HEAD, self.data_model.adjusted_water_head)
+        #         self._tool.deselect()
+        #     # self._series[0].index.metadata['selection_masks'] = None
+        # def set_value_selection(self, v):
+        #     if v is None:
+        #         v = array([])
+
+        # for s in self._series:
+        #     s.index.metadata['selections'] = v
+
+        # def has_selection(self):
+        #     if isinstance(self._tool.selection, tuple):
+        #         return bool(self._tool.selection)
+        #     else:
+        #         return self._tool.selection.any()
+        #         # return self._tool.selection and self._tool.selection.any()
+        #
+        # private
+        # def _apply_constant_offset(self, v):
+        #     try:
+        #         mask = self._series[0].index.metadata['selection_masks'][0]
+        #         self.data_model.apply_offset(ADJ_WATER_HEAD, v, mask)
+        #         return True
+        #     except KeyError:
+        #         pass
+        #
+        # def _apply_linear_interpolation(self):
+        #
+        #     mask = self._series[0].index.metadata['selection_masks'][0]
+        #     s,e = self._series[0].index.metadata['selections']
+        #
+        #     self.data_model.apply_linear(ADJ_WATER_HEAD, s, e, mask)
+        #
+        # def _gather_db_record(self):
+        #     raise NotImplementedError
+        #
+        # def _add_range_selection(self, series, listeners=None):
+        #     series.active_tool = tool = RangeSelection(series, left_button_selects=True)
+        #     if listeners:
+        #         tool.listeners = listeners
+        #
+        #     series.overlays.append(RangeSelectionOverlay(component=series))
+        #     return tool
+
+        # def import_db(self):
+        #     db = NMWellDatabase()
+        #     if db.connect(config.db_host,
+        #                   config.db_user,
+        #                   config.db_password,
+        #                   config.db_name,
+        #                   config.db_login_timeout):
+        #
+        #         # do database import here
+        #         record = self._gather_db_record()
+        #         db.add_record(record)
+        #
+        #         return True, db.url
+        #     else:
+        #         return False, db.url
+        #
+        # def apply_offset(self, kind, v):
+        #     if kind.lower() == 'constant':
+        #         self._apply_constant_offset(v)
+        #     else:
+        #         self._apply_linear_interpolation()
+        #
+        #     self.plot_container.invalidate_and_redraw()
+        #     self._plots[ADJ_WATER_HEAD].data.set_data(ADJ_WATER_HEAD, self.data_model.adjusted_water_head)
+        #     self._tool.deselect()
+        #     self._series[0].index.metadata['selection_masks'] = None
