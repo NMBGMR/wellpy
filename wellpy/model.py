@@ -43,6 +43,7 @@ class NoSelectionError(BaseException):
 WATER_HEAD = 'water_head'
 ADJ_WATER_HEAD = 'adjusted_water_head'
 MANUAL_MEASUREMENTS = 'manual'
+MANUAL_MEASUREMENTS_SCATTER = 'manual_scatter'
 
 
 class PointIDRecord(HasTraits):
@@ -99,7 +100,6 @@ class WellpyModel(HasTraits):
         xs, ys = array([factory(mi) for mi in ms]).T
         plot = self._plots[MANUAL_MEASUREMENTS]
 
-
     def fix_data(self, threshold):
         """
         automatically remove offsets and zeros
@@ -117,7 +117,20 @@ class WellpyModel(HasTraits):
         # update adjusted head
         self.data_model.adjusted_water_head = ys
         plot = self._plots[ADJ_WATER_HEAD]
-        plot.data.set_data(ADJ_WATER_HEAD, ys)
+        plot.data.set_data('y', ys)
+
+        self.plot_container.invalidate_and_redraw()
+
+    def smooth_data(self, window, method):
+        plot = self._plots[ADJ_WATER_HEAD]
+
+        ys = self.data_model.adjusted_water_head
+        sy = self.data_model.smooth(ys, window, method)
+
+        plot_needed = 'sy' not in plot.data.arrays
+        plot.data.set_data('sy', sy)
+        if plot_needed:
+            plot.plot(('x', 'sy'), color='green')
 
         self.plot_container.invalidate_and_redraw()
 
@@ -134,78 +147,127 @@ class WellpyModel(HasTraits):
         self.initialize_plot()
 
     def initialize_plot(self):
-        data = self.data_model
-
         container = self.plot_container
-        self._series = []
         self._plots = {}
-        index, rr = None, None
-        for i, (a, title) in enumerate((('adjusted_water_head', 'Adj. Head'),
-                                        ('water_head', 'Head'),
-                                        # ('temp', 'Temp.'),
-                                        # ('water_level_elevation', 'Elev.')
-                                        )):
-            plot = Plot(data=ArrayPlotData(**{'x': data.x, a: getattr(data, a)}),
-                        padding=[70, 10, 10, 10])
 
-            if index is None:
-                index = plot.index_mapper
-                rr = plot.index_range
-            else:
-                plot.index_mapper = index
-                plot.index_range = rr
+        padding = [70, 10, 10, 10]
 
-            series = plot.plot(('x', a))[0]
-            plot.plot(('x', a),
-                      marker_size=1.5,
-                      type='scatter')
+        plot = self._add_adjusted_water_head(padding)
+        container.add(plot)
 
-            dt = DataTool(plot=series, component=plot,
-                          normalize_time=False,
-                          use_date_str=True)
-            dto = DataToolOverlay(
-                component=series,
-                tool=dt)
-            series.tools.append(dt)
-            series.overlays.append(dto)
+        plot = self._add_water_head(padding)
+        container.add(plot)
 
-            plot.y_axis.title = title
-            if i != 0:
-                plot.x_axis.visible = False
-            else:
+        self._add_water_level(padding)
 
-                zoom = ZoomTool(plot, tool_mode="range",
-                                axis='index',
-                                color=(0, 1, 0, 0.5),
-                                enable_wheel=False,
-                                always_on=False)
-                plot.overlays.append(zoom)
+        # index, rr = None, None
+        # for i, (a, title) in enumerate((('adjusted_water_head', 'Adj. Head'),
+        #                                 ('water_head', 'Head'),
+        #                                 # ('temp', 'Temp.'),
+        #                                 # ('water_level_elevation', 'Elev.')
+        #                                 )):
+        #     plot = Plot(data=ArrayPlotData(**{'x': data.x, a: getattr(data, a)}),
+        #                 padding=[70, 10, 10, 10])
+        #
+        #     if index is None:
+        #         index = plot.index_mapper
+        #         rr = plot.index_range
+        #     else:
+        #         plot.index_mapper = index
+        #         plot.index_range = rr
+        #
+        #     series = plot.plot(('x', a))[0]
+        #     plot.plot(('x', a),
+        #               marker_size=1.5,
+        #               type='scatter')
+        #
+        #     dt = DataTool(plot=series, component=plot,
+        #                   normalize_time=False,
+        #                   use_date_str=True)
+        #     dto = DataToolOverlay(
+        #         component=series,
+        #         tool=dt)
+        #     series.tools.append(dt)
+        #     series.overlays.append(dto)
+        #
+        #     plot.y_axis.title = title
+        #     if i != 0:
+        #         plot.x_axis.visible = False
+        #     else:
+        #
+        #         zoom = ZoomTool(plot, tool_mode="range",
+        #                         axis='index',
+        #                         color=(0, 1, 0, 0.5),
+        #                         enable_wheel=False,
+        #                         always_on=False)
+        #         plot.overlays.append(zoom)
+        #
+        #         # tool = RangeSelection(series, left_button_selects=True,
+        #         #                       listeners=[self])
+        #         # self._tool = tool
+        #         #
+        #         # series.tools.append(tool)
+        #         # series.active_tool = tool
+        #         # plot.x_axis.title = 'Time'
+        #         bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
+        #                                tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
+        #         plot.x_axis = bottom_axis
+        #
+        #         plot.padding_bottom = 50
+        #
+        #     series.overlays.append(RangeSelectionOverlay(component=series))
+        #     container.add(plot)
+        #     self._series.append(series)
+        #     self._plots[a] = plot
 
-                # tool = RangeSelection(series, left_button_selects=True,
-                #                       listeners=[self])
-                # self._tool = tool
-                #
-                # series.tools.append(tool)
-                # series.active_tool = tool
-                # plot.x_axis.title = 'Time'
-                bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
-                                       tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
-                plot.x_axis = bottom_axis
 
-                plot.padding_bottom = 50
+        container.invalidate_and_redraw()
 
-            series.overlays.append(RangeSelectionOverlay(component=series))
-            container.add(plot)
-            self._series.append(series)
-            self._plots[a] = plot
-
+    def _add_water_head(self, padding):
+        plot, line, scatter = self._add_line_scatter('water_head', 'Water Head', padding)
+        plot.x_axis.visible = False
         # add overlays
-        plot = self._plots[WATER_HEAD]
         o = RangeOverlay(plot=plot)
         plot.auto_fixed_range_overlay = o
         plot.overlays.append(o)
+        self._plots[WATER_HEAD] = plot
+        return plot
 
-        container.invalidate_and_redraw()
+    def _add_adjusted_water_head(self, padding):
+        plot, line, scatter = self._add_line_scatter('adjusted_water_head', 'Adj. Water Head', padding)
+        bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
+                               tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
+        plot.x_axis = bottom_axis
+
+        plot.padding_bottom = 50
+        self._plots[ADJ_WATER_HEAD] = plot
+        return plot
+
+    def _add_water_level(self, padding):
+        pass
+
+    def _add_line_scatter(self, key, title, padding):
+        data = self.data_model
+        pd = ArrayPlotData(x=data.x, y=getattr(data, key))
+        plot = Plot(data=pd, padding=padding)
+        plot.y_axis.title = title
+
+        line = plot.plot(('x', 'y'))[0]
+        scatter = plot.plot(('x', 'y'), marker_size=1.5, type='scatter')
+
+        dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
+        dto = DataToolOverlay(component=line, tool=dt)
+        line.tools.append(dt)
+        line.overlays.append(dto)
+
+        zoom = ZoomTool(plot,
+                        # tool_mode="range",
+                        axis='index',
+                        color=(0, 1, 0, 0.5),
+                        enable_wheel=False,
+                        always_on=False)
+        plot.overlays.append(zoom)
+        return plot, line, scatter
 
     def _plot_container_default(self):
         pc = VPlotContainer()

@@ -21,6 +21,8 @@ from datetime import datetime
 from numpy import empty, polyfit, polyval, array, where, diff
 from openpyxl import load_workbook
 
+from wellpy.sigproc import smooth
+
 
 class Channel:
     identification = None
@@ -40,6 +42,12 @@ class DataModel:
 
     def get_water_head(self):
         return array(self._water_head)
+
+    def smooth(self, ys, window, method):
+
+        pys = smooth(ys, window, method)
+
+        return pys
 
     def fix_data(self, ys, threshold):
         x = self.x

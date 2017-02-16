@@ -20,11 +20,12 @@ from pyface.constant import OK
 from pyface.file_dialog import FileDialog
 from pyface.tasks.traits_dock_pane import TraitsDockPane
 from pyface.tasks.traits_task_pane import TraitsTaskPane
-from traits.api import Button, Float, Property
+from traits.api import Button, Float, Property, Int, Enum
 from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring
 from traitsui.tabular_adapter import TabularAdapter
 
 from globals import FILE_DEBUG
+from wellpy.sigproc import SMOOTH_METHODS
 
 
 class PointIDAdapter(TabularAdapter):
@@ -45,11 +46,18 @@ class ToolboxPane(TraitsDockPane):
     constant_offset = Float
     threshold = Float(1)
 
+    smooth_data_button = Button('Smooth')
+    window = Int(11)
+    method = Enum(SMOOTH_METHODS)
+
     def _constant_offset_changed(self, new):
         self.model.apply_constant_offset(new)
 
     def _fix_data_button_fired(self):
         self.model.fix_data(self.threshold)
+
+    def _smooth_data_button_fired(self):
+        self.model.smooth_data(self.window, self.method)
 
     def traits_view(self):
         manual_grp = VGroup(Item('pane.constant_offset', label='Constant Offset'),
@@ -57,8 +65,12 @@ class ToolboxPane(TraitsDockPane):
         auto_grp = VGroup(Item('pane.threshold', label='Threshold'),
                           UItem('pane.fix_data_button'),
                           show_border=True, label='Auto')
+        smooth_grp = VGroup(HGroup(UItem('pane.method'), Item('pane.window')),
+                            UItem('pane.smooth_data_button'),
+                            show_border=True,
+                            label='Smooth')
 
-        v = View(VGroup(manual_grp, auto_grp))
+        v = View(VGroup(manual_grp, auto_grp, smooth_grp))
         return v
 
 

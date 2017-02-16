@@ -31,8 +31,8 @@ from wellpy.tasks.panes import WellPane, WellCentralPane, ToolboxPane, AutoResul
 
 
 class WellpyTask(Task):
+    name = 'Wellpy'
     id = 'wellpy.task'
-
     model = Instance(WellpyModel, ())
 
     # def __init__(self, *args, **kw):
