@@ -1,0 +1,9 @@
+name: wellpy
+dependencies:
+- pip:
+  - commonmark==0.5.4
+  - future==0.15.2
+  - pdfrw==0.2
+  - recommonmark==0.4.0
+  - sphinx-rtd-theme==0.1.9
+
