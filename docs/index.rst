@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    depth_to_water
+   stored_procedures
 
 
 

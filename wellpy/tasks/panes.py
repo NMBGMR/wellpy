@@ -21,7 +21,7 @@ from pyface.file_dialog import FileDialog
 from pyface.tasks.traits_dock_pane import TraitsDockPane
 from pyface.tasks.traits_task_pane import TraitsTaskPane
 from traits.api import Button, Float, Property, Int, Enum
-from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring
+from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring, EnumEditor
 from traitsui.tabular_adapter import TabularAdapter
 
 from globals import FILE_DEBUG
@@ -50,6 +50,8 @@ class ToolboxPane(TraitsDockPane):
     window = Int(11)
     method = Enum(SMOOTH_METHODS)
 
+    calculate_button = Button('Calculate')
+
     def _constant_offset_changed(self, new):
         self.model.apply_constant_offset(new)
 
@@ -58,6 +60,9 @@ class ToolboxPane(TraitsDockPane):
 
     def _smooth_data_button_fired(self):
         self.model.smooth_data(self.window, self.method)
+
+    def _calculate_button_fired(self):
+        self.model.calculate_depth_to_water()
 
     def traits_view(self):
         manual_grp = VGroup(Item('pane.constant_offset', label='Constant Offset'),
@@ -70,7 +75,8 @@ class ToolboxPane(TraitsDockPane):
                             show_border=True,
                             label='Smooth')
 
-        v = View(VGroup(manual_grp, auto_grp, smooth_grp))
+        calculate_grp = VGroup(UItem('pane.calculate_button'))
+        v = View(VGroup(manual_grp, auto_grp, smooth_grp, calculate_grp))
         return v
 
 
@@ -97,10 +103,10 @@ class WellPane(TraitsDockPane):
     id = 'wellpy.well.pane'
     name = 'Well'
     open_file_button = Button('Open')
-    retrieve_manual_button = Button('Retrieve')
+    retrieve_depth_to_sensor_button = Button('Retrieve')
 
-    def _retrieve_manual_button_fired(self):
-        self.model.retrieve_manual()
+    def _retrieve_depth_to_sensor_button_fired(self):
+        self.model.retrieve_depth_to_sensor()
 
     def _open_file_button_fired(self):
 
@@ -121,7 +127,7 @@ class WellPane(TraitsDockPane):
                                 editor=TabularEditor(selected='selected_point_id',
                                                      editable=False,
                                                      adapter=PointIDAdapter())),
-                          UItem('pane.retrieve_manual_button',
+                          UItem('pane.retrieve_depth_to_sensor_button',
                                 enabled_when='selected_point_id'),
                           show_border=True,
                           label='Site')
@@ -131,7 +137,11 @@ class WellPane(TraitsDockPane):
                         show_border=True,
                         label='Diver File')
 
-        metadata_grp = VGroup(show_border=True, label='Metadata')
+        metadata_grp = VGroup(Item('data_source', editor=EnumEditor(name='data_sources')),
+                              Item('measurement_agency', editor=EnumEditor(name='measurement_agencies')),
+                              Item('measurement_method', editor=EnumEditor(name='measurement_methods')),
+                              # Item('note'),
+                              show_border=True, label='Metadata')
 
         v = View(VGroup(df_grp, site_grp, metadata_grp))
 

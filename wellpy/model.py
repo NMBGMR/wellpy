@@ -19,13 +19,14 @@ from chaco.plot_containers import VPlotContainer
 from chaco.tools.api import ZoomTool
 from chaco.array_plot_data import ArrayPlotData
 from chaco.plot import Plot
+from chaco.tools.pan_tool2 import PanTool
 from chaco.tools.range_selection import RangeSelection
 from chaco.tools.range_selection_overlay import RangeSelectionOverlay
 from datetime import datetime
 from traits.api import HasTraits, Instance, Float, List, Property, Str, Button
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
-from numpy import array, diff, where
+from numpy import array, diff, where, ones, logical_and, hstack, zeros_like
 
 from globals import DATABSE_DEBUG
 from wellpy.config import config
@@ -42,12 +43,12 @@ class NoSelectionError(BaseException):
 
 WATER_HEAD = 'water_head'
 ADJ_WATER_HEAD = 'adjusted_water_head'
-MANUAL_MEASUREMENTS = 'manual'
-MANUAL_MEASUREMENTS_SCATTER = 'manual_scatter'
+DEPTH_TO_SENSOR = 'depth_to_sensor'
+DEPTH_TO_SENSOR_SCATTER = 'depth_to_sensor_scatter'
+DEPTH_TO_WATER = 'depth_to_water'
 
 
-class PointIDRecord(HasTraits):
-    name = Str
+
 
 
 class AutoResult(HasTraits):
@@ -59,6 +60,15 @@ class AutoResult(HasTraits):
         self.offset = offset
         self.start = datetime.fromtimestamp(s)
         self.end = datetime.fromtimestamp(e)
+
+
+class SaveSpec:
+    point_id = None
+
+    note = None
+    data_source = None
+    measuring_agency = None
+    measurement_method = None
 
 
 class WellpyModel(HasTraits):
@@ -75,6 +85,15 @@ class WellpyModel(HasTraits):
     path = Str
     filename = Property(depends_on='path')
 
+    data_source = Str
+    data_sources = List
+
+    measurement_agency = Str
+    measurement_agencies = List
+
+    measurement_method = Str
+    measurement_methods = List
+
     auto_results = List
     db = Instance(DatabaseConnector, ())
 
@@ -85,9 +104,9 @@ class WellpyModel(HasTraits):
 
         self.point_ids = [PointIDRecord(name=p) for p in pids]
 
-    def retrieve_manual(self):
+    def retrieve_depth_to_sensor(self):
         """
-        retrieve the manual measurements from database for selected_pointID
+        retrieve the depth to sensor measurements from database for selected_pointID
         :return:
         """
 
@@ -98,7 +117,67 @@ class WellpyModel(HasTraits):
             pass
 
         xs, ys = array([factory(mi) for mi in ms]).T
-        plot = self._plots[MANUAL_MEASUREMENTS]
+        plot = self._plots[DEPTH_TO_SENSOR]
+
+    def calculate_depth_to_water(self, correct_drift=True):
+        """
+        calculate depth to water
+        ------------------------------------------------------
+        |           |   |
+        |           |   |
+        |           |   |
+        |           |   |    depth_to_water == d
+        |           |   |                                     manual_measurement
+        |           |   |
+        |           |   |
+        ~~~~~~~~~~~ | -------
+        |           |
+        |           |        adjusted_water_head
+        |           |
+        |-----------| ------- --------------------------------
+
+
+        w/o drift
+        d(t) = manual_measurement - adjusted_water_head
+
+        w/drift
+        d(t) = (manual_measurement_1 - m(t-t_0)) - adjusted_water_head
+        where m = dL/dt == (manual_measurement_1 - manual_measurement_0) / (t_1 - t_0)
+
+
+        :return:
+        """
+
+        def calculated_dtw_bin(l1, l0, x, h):
+            l = l1 * ones(h.shape[0])
+            if correct_drift:
+                to = x[0]
+                m = (l1 - l0) / (x[-1] - to)
+                l = [l1 - m * (t - to) for t in x]
+
+            dtw = l - h
+            return dtw
+
+        ah = self.data_model.adjusted_water_head
+        xs = self.data_model.x
+        ds = self.data_model.depth_to_sensor
+
+        # ds needs to be reverse sorted
+        # eg. (t1, t0)
+        dd = zeros_like(ah)
+
+        for i in xrange(len(ds)):
+            m1, m0 = ds[i], ds[i + 1]
+
+            mask = where(logical_and(xs <= m1[0], xs >= m0[0]))[0]
+
+            dd[mask] = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
+
+        self.data_model.depth_to_water = dd
+
+        plot = self._plot[DEPTH_TO_WATER]
+        plot.data.set_data('y', dd)
+        self.refresh_plot()
 
     def fix_data(self, threshold):
         """
@@ -119,6 +198,9 @@ class WellpyModel(HasTraits):
         plot = self._plots[ADJ_WATER_HEAD]
         plot.data.set_data('y', ys)
 
+        self.refresh_plot()
+
+    def refresh_plot(self):
         self.plot_container.invalidate_and_redraw()
 
     def smooth_data(self, window, method):
@@ -126,13 +208,12 @@ class WellpyModel(HasTraits):
 
         ys = self.data_model.adjusted_water_head
         sy = self.data_model.smooth(ys, window, method)
-
         plot_needed = 'sy' not in plot.data.arrays
         plot.data.set_data('sy', sy)
         if plot_needed:
-            plot.plot(('x', 'sy'), color='green')
+            plot.plot(('x', 'sy'), color='green', line_width=1.5)
 
-        self.plot_container.invalidate_and_redraw()
+        self.refresh_plot()
 
     def load_file(self, p):
         """
@@ -160,68 +241,7 @@ class WellpyModel(HasTraits):
 
         self._add_water_level(padding)
 
-        # index, rr = None, None
-        # for i, (a, title) in enumerate((('adjusted_water_head', 'Adj. Head'),
-        #                                 ('water_head', 'Head'),
-        #                                 # ('temp', 'Temp.'),
-        #                                 # ('water_level_elevation', 'Elev.')
-        #                                 )):
-        #     plot = Plot(data=ArrayPlotData(**{'x': data.x, a: getattr(data, a)}),
-        #                 padding=[70, 10, 10, 10])
-        #
-        #     if index is None:
-        #         index = plot.index_mapper
-        #         rr = plot.index_range
-        #     else:
-        #         plot.index_mapper = index
-        #         plot.index_range = rr
-        #
-        #     series = plot.plot(('x', a))[0]
-        #     plot.plot(('x', a),
-        #               marker_size=1.5,
-        #               type='scatter')
-        #
-        #     dt = DataTool(plot=series, component=plot,
-        #                   normalize_time=False,
-        #                   use_date_str=True)
-        #     dto = DataToolOverlay(
-        #         component=series,
-        #         tool=dt)
-        #     series.tools.append(dt)
-        #     series.overlays.append(dto)
-        #
-        #     plot.y_axis.title = title
-        #     if i != 0:
-        #         plot.x_axis.visible = False
-        #     else:
-        #
-        #         zoom = ZoomTool(plot, tool_mode="range",
-        #                         axis='index',
-        #                         color=(0, 1, 0, 0.5),
-        #                         enable_wheel=False,
-        #                         always_on=False)
-        #         plot.overlays.append(zoom)
-        #
-        #         # tool = RangeSelection(series, left_button_selects=True,
-        #         #                       listeners=[self])
-        #         # self._tool = tool
-        #         #
-        #         # series.tools.append(tool)
-        #         # series.active_tool = tool
-        #         # plot.x_axis.title = 'Time'
-        #         bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
-        #                                tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
-        #         plot.x_axis = bottom_axis
-        #
-        #         plot.padding_bottom = 50
-        #
-        #     series.overlays.append(RangeSelectionOverlay(component=series))
-        #     container.add(plot)
-        #     self._series.append(series)
-        #     self._plots[a] = plot
-
-
-        container.invalidate_and_redraw()
+        self.refresh_plot()
 
     def _add_water_head(self, padding):
         plot, line, scatter = self._add_line_scatter('water_head', 'Water Head', padding)
@@ -238,8 +258,11 @@ class WellpyModel(HasTraits):
         bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
                                tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
         plot.x_axis = bottom_axis
-
         plot.padding_bottom = 50
+
+        pt = PanTool(component=plot)
+        plot.tools.append(pt)
+
         self._plots[ADJ_WATER_HEAD] = plot
         return plot
 

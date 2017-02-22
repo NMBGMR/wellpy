@@ -14,6 +14,7 @@
 # limitations under the License.
 # ===============================================================================
 import pymssql
+from traits.api import HasTraits, Str
 
 
 class MockConnection:
@@ -52,6 +53,17 @@ class SessionCTX:
         self._conn.close()
 
 
+class PointIDRecord(HasTraits):
+    name = Str
+    install_date = None
+    serial_num = Str
+
+    def __init__(self, name, install_date, serial_num):
+        self.name = name
+        self.install_date = install_date
+        self.serial_num = serial_num
+
+
 class DatabaseConnector:
     _host = ''
     _user = ''
@@ -61,7 +73,7 @@ class DatabaseConnector:
     def get_point_ids(self):
         with self._get_cursor() as cursor:
             cursor.execute('GetPointIDsPython')
-            return [r[0] for r in cursor.fetchall()]
+            return [PointIDRecord(*r) for r in cursor.fetchall()]
 
     def get_manual_measurements(self, point_id):
         with self._get_cursor() as cursor:

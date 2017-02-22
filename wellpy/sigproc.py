@@ -25,7 +25,7 @@ SMOOTH_METHODS = ('moving average', 'hanning', 'hamming', 'bartlett', 'blackman'
 
 
 # adapted from http://scipy-cookbook.readthedocs.io/items/SignalSmooth.html
-def smooth(x, window_len=11, window='hanning'):
+def smooth(y, window_len=11, window='hanning'):
     """smooth the data using a window with requested size.
 
     This method is based on the convolution of a scaled window with the signal.
@@ -34,7 +34,7 @@ def smooth(x, window_len=11, window='hanning'):
     in the begining and end part of the output signal.
 
     input:
-        x: the input signal
+        y: the input signal
         window_len: the dimension of the smoothing window; should be an odd integer
         window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
             flat window will produce a moving average smoothing.
@@ -45,8 +45,8 @@ def smooth(x, window_len=11, window='hanning'):
     example:
 
     t=linspace(-2,2,0.1)
-    x=sin(t)+randn(len(t))*0.1
-    y=smooth(x)
+    y=sin(t)+randn(len(t))*0.1
+    y=smooth(y)
 
     see also:
 
@@ -57,26 +57,27 @@ def smooth(x, window_len=11, window='hanning'):
     NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
     """
 
-    if x.ndim != 1:
+    if y.ndim != 1:
         raise ValueError, "smooth only accepts 1 dimension arrays."
 
-    if x.size < window_len:
+    if y.size < window_len:
         raise ValueError, "Input vector needs to be bigger than window size."
 
     if window_len < 3:
-        return x
+        return y
 
     if window not in SMOOTH_METHODS:
         raise ValueError, "Window is on of {}".format(SMOOTH_METHODS)
 
-    s = numpy.r_[x[window_len - 1:0:-1], x, x[-1:-window_len:-1]]
+    s = numpy.r_[y[window_len - 1:0:-1], y, y[-1:-window_len:-1]]
     # print(len(s))
     if window == 'moving average':  # moving average
         w = numpy.ones(window_len, 'd')
     else:
         w = eval('numpy.' + window + '(window_len)')
 
-    y = numpy.convolve(w / w.sum(), s, mode='valid')
-    return y
+    y = numpy.convolve(w / w.sum(), s, mode='same')
+
+    return y[window_len-1:-window_len+1]
 
 # ============= EOF =============================================
