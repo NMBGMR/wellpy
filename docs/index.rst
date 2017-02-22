@@ -11,6 +11,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   depth_to_water
+
 
 
 Indices and tables
