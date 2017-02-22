@@ -3,10 +3,10 @@ Depth To Water
 
 .. code-block:: python
 
-   ground surface ------------------| |--------------------------
+   ground surface ------------------| |-------------------------
                                     | |   |       |            |
-                                    | |   | d_0   |            |
-                                    | |   |       | d_1        |
+                                    | |   | d0    |            |
+                                    | |   |       | d1         |
                                     | |   |       |            |
    water table t_o    ---------------------       |            |
                       |             | |           |            |  L
@@ -29,7 +29,7 @@ Depth To Water
 
 where :math:`L'`
 
-.. math:: L' = L_{1} - (L_{1}-L_{0})/(t_{1}-t_{0})*(t-t_{0})
+.. math:: L' = L_{1} - \frac{(L_{1}-L_{0})}{(t_{1}-t_{0})}*(t-t_{0})
   :label: drift_l
 
 To calculate `depth_to_water` at a given time `t` use :eq:`corrected_no_drift`
