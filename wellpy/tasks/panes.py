@@ -131,6 +131,7 @@ class WellPane(TraitsDockPane):
                           UItem('filtered_point_ids',
                                 editor=TabularEditor(selected='selected_point_id',
                                                      editable=False,
+                                                     scroll_to_row='scroll_to_row',
                                                      adapter=PointIDAdapter())),
                           UItem('pane.retrieve_depth_to_sensor_button',
                                 enabled_when='selected_point_id'),

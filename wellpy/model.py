@@ -23,10 +23,12 @@ from chaco.tools.pan_tool2 import PanTool
 from chaco.tools.range_selection import RangeSelection
 from chaco.tools.range_selection_overlay import RangeSelectionOverlay
 from datetime import datetime
-from traits.api import HasTraits, Instance, Float, List, Property, Str, Button
+
+from pyface.message_dialog import information, warning
+from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
-from numpy import array, diff, where, ones, logical_and, hstack, zeros_like
+from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack
 
 from globals import DATABSE_DEBUG
 from wellpy.config import config
@@ -47,9 +49,7 @@ ADJ_WATER_HEAD = 'adjusted_water_head'
 DEPTH_TO_SENSOR = 'depth_to_sensor'
 DEPTH_TO_SENSOR_SCATTER = 'depth_to_sensor_scatter'
 DEPTH_TO_WATER = 'depth_to_water'
-
-
-
+WATER_LEVEL = 'water_level'
 
 
 class AutoResult(HasTraits):
@@ -98,6 +98,8 @@ class WellpyModel(HasTraits):
     auto_results = List
     db = Instance(DatabaseConnector)
 
+    scroll_to_row = Int
+
     def activated(self):
         if DATABSE_DEBUG:
             pids = ['A', 'B', 'C']
@@ -105,6 +107,7 @@ class WellpyModel(HasTraits):
         else:
             pids = self.db.get_point_ids()
             self.point_ids = pids
+        self.selected_point_id = self.point_ids[0]
 
     def retrieve_depth_to_sensor(self):
         """
@@ -113,13 +116,35 @@ class WellpyModel(HasTraits):
         """
 
         pid = self.selected_point_id
-        ms = self.db.get_manual_measurements(pid)
+        ms = self.db.get_depth_to_sensor(pid.name)
+        # print ms
 
-        def factory(mm):
-            pass
+        # def factory(mm):
+        #     sd = SensorDepth()
+        #     return sd
 
-        xs, ys = array([factory(mi) for mi in ms]).T
+        xs, ys = array(sorted([mi.measurement for mi in ms],
+                              # reverse=True,
+                              key=lambda x: x[0])).T
+
         plot = self._plots[DEPTH_TO_SENSOR]
+        # plot.data.set_data('sensor_depth_x', )
+        # plot.data.set_data('sensor_depth_x', dd)
+        self.data_model.sensor_depth_x = xs
+        self.data_model.sensor_depth_y = ys
+
+        plot_needed = 'sensor_depth_x' not in plot.data.arrays
+        plot.data.set_data('sensor_depth_x', xs)
+        plot.data.set_data('sensor_depth_y', ys)
+        if plot_needed:
+            plot.plot(('sensor_depth_x', 'sensor_depth_y'),
+                      render_style='connectedhold',
+                      line_style='dash',
+                      color='blue', line_width=1.5)
+            plot.plot(('sensor_depth_x', 'sensor_depth_y'),
+                      # render_style='connected',
+                      color='blue', line_width=1.5)
+        self.refresh_plot()
 
     def calculate_depth_to_water(self, correct_drift=True):
         """
@@ -162,23 +187,27 @@ class WellpyModel(HasTraits):
 
         ah = self.data_model.adjusted_water_head
         xs = self.data_model.x
-        ds = self.data_model.depth_to_sensor
 
-        # ds needs to be reverse sorted
-        # eg. (t1, t0)
+        # ds = self.data_model.depth_to_sensor
+        ds = column_stack((self.data_model.sensor_depth_x, self.data_model.sensor_depth_y))[::-1]
+
         dd = zeros_like(ah)
+        for i in xrange(len(ds) - 1, 0, -1):
+            m1, m0 = ds[i], ds[i - 1]
+            mask = where(logical_and(xs <= m0[0], xs >= m1[0]))[0]
+            if mask.any():
+                dd[mask] = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
 
-        for i in xrange(len(ds)):
-            m1, m0 = ds[i], ds[i + 1]
+        plot = self._plots[WATER_LEVEL]
 
-            mask = where(logical_and(xs <= m1[0], xs >= m0[0]))[0]
+        plot_needed = 'depth_to_water_x' not in plot.data.arrays
+        plot.data.set_data('depth_to_water_x', xs)
+        plot.data.set_data('depth_to_water_y', dd)
 
-            dd[mask] = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
+        if plot_needed:
+            plot.plot(('depth_to_water_x', 'depth_to_water_y'),
+                      line_width=1.5)
 
-        self.data_model.depth_to_water = dd
-
-        plot = self._plot[DEPTH_TO_WATER]
-        plot.data.set_data('y', dd)
         self.refresh_plot()
 
     def fix_data(self, threshold):
@@ -229,6 +258,21 @@ class WellpyModel(HasTraits):
         self.data_model = data
         self.initialize_plot()
 
+        # get the point id
+        serial_num = data.serial_number
+        if not serial_num:
+            warning(None, 'Could not extract Serial number from file')
+        else:
+            point_ids = [p for p in self.point_ids if p.serial_num == serial_num]
+            if point_ids:
+                self.selected_point_id = point_ids[-1]
+                self.scroll_to_row = self.point_ids.index(self.selected_point_id)
+
+                self.retrieve_depth_to_sensor()
+
+            else:
+                information(None, 'Serial number="{}"  not in database')
+
     def initialize_plot(self):
         container = self.plot_container
         self._plots = {}
@@ -236,14 +280,30 @@ class WellpyModel(HasTraits):
         padding = [70, 10, 10, 10]
 
         plot = self._add_adjusted_water_head(padding)
+        index_range = plot.index_range
         container.add(plot)
 
         plot = self._add_water_head(padding)
+        plot.index_range = index_range
         container.add(plot)
 
-        self._add_water_level(padding)
+        plot = self._add_sensor_depth(padding)
+        plot.index_range = index_range
+        container.add(plot)
+
+        plot = self._add_depth_to_water(padding)
+        plot.index_range = index_range
+        container.add(plot)
 
         self.refresh_plot()
+
+    def _add_depth_to_water(self, padding):
+        plot, line, scatter = self._add_line_scatter('depth_to_water_y', 'Water Level BGS', padding,
+                                                     x=self.data_model.depth_to_water_x)
+        plot.x_axis.visible = False
+        self._plots[WATER_LEVEL] = plot
+
+        return plot
 
     def _add_water_head(self, padding):
         plot, line, scatter = self._add_line_scatter('water_head', 'Water Head', padding)
@@ -268,12 +328,21 @@ class WellpyModel(HasTraits):
         self._plots[ADJ_WATER_HEAD] = plot
         return plot
 
-    def _add_water_level(self, padding):
-        pass
+    def _add_sensor_depth(self, padding):
+        x = self.data_model.sensor_depth_x
 
-    def _add_line_scatter(self, key, title, padding):
+        plot, line, scatter = self._add_line_scatter('sensor_depth_y', 'SensorBGS', padding, x=x)
+        plot.x_axis.visible = False
+
+        self._plots[DEPTH_TO_SENSOR] = plot
+        return plot
+
+    def _add_line_scatter(self, key, title, padding, x=None):
         data = self.data_model
-        pd = ArrayPlotData(x=data.x, y=getattr(data, key))
+        if x is None:
+            x = data.x
+
+        pd = ArrayPlotData(x=x, y=getattr(data, key))
         plot = Plot(data=pd, padding=padding)
         plot.y_axis.title = title
 

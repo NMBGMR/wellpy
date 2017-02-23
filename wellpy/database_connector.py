@@ -14,11 +14,10 @@
 # limitations under the License.
 # ===============================================================================
 import pymssql
-
-from datetime import datetime
+import time
 
 from apptools.preferences.preference_binding import bind_preference
-from traits.api import HasTraits, Str
+from traits.api import HasTraits, Str, UUID, Float
 
 
 class MockConnection:
@@ -68,6 +67,23 @@ class PointIDRecord(HasTraits):
         self.serial_num = serial_num or ''
 
 
+class SensorDepthRecord(HasTraits):
+    uuid = Str
+    point_id = Str
+    # measurement_date = None
+    level_status = None
+    # depth = Float
+
+    def __init__(self, uuid, point_id, measurement_date, depth, level_status, *args, **kw):
+        super(SensorDepthRecord, self).__init__(*args, **kw)
+        # self.depth = depth
+        self.uuid = str(uuid)
+        self.point_id = point_id
+        # self.measurement_date = measurement_date
+        self.level_status = level_status
+        self.measurement = (time.mktime(measurement_date.timetuple()), depth)
+
+
 class DatabaseConnector(HasTraits):
     _host = Str
     _user = Str
@@ -92,7 +108,7 @@ class DatabaseConnector(HasTraits):
     def get_depth_to_sensor(self, point_id):
         with self._get_cursor() as cursor:
             cursor.execute('GetWaterLevelsPython %s', (point_id,))
-            return cursor.fetchall()
+            return [SensorDepthRecord(*r) for r in cursor.fetchall()]
 
     def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
         with self._get_cursor() as cursor:

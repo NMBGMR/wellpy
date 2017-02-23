@@ -34,11 +34,21 @@ class DataModel:
     adjusted_water_head = None
     water_head = None
     filtered_zeros = None
+    serial_number = None
+    sensor_depth_x = None
+    sensor_depth_y = None
+    depth_to_water_x = None
+    depth_to_water_y = None
 
     def __init__(self, path):
         self._path = path
         if os.path.isfile(path):
             self._load(path)
+
+        self.sensor_depth_x = array([])
+        self.sensor_depth_y = array([])
+        self.depth_to_water_x = array([])
+        self.depth_to_water_y = array([])
 
     def get_water_head(self):
         return array(self._water_head)
@@ -82,6 +92,11 @@ class DataModel:
         ws = []
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
+                if not self.serial_number:
+                    if line.strip().startswith('Serial number'):
+                        s = line.strip().split('=')[-1]
+                        self.serial_number = s.split(' ')[0][5:]
+
                 if i < 53:
                     continue
                 line = line.strip()
