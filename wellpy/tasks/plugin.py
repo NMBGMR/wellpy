@@ -24,13 +24,11 @@ from traitsui.menu import Action
 from wellpy.tasks.task import WellpyTask
 
 
-
-
-
 class WellpyPlugin(Plugin):
     name = 'Wellpy'
 
     tasks = List(contributes_to='envisage.ui.tasks.tasks')
+
     # service_offers = List(contributes_to='envisage.service_offers')
     # available_task_extensions = List(contributes_to='pychron.available_task_extensions')
     # task_extensions = List(contributes_to='envisage.ui.tasks.task_extensions')
@@ -58,6 +56,10 @@ class WellpyPlugin(Plugin):
                             factory=self._wellpy_factory), ]
 
     def _wellpy_factory(self):
-        return WellpyTask()
+        wt = WellpyTask()
+        db = self.application.get_service('wellpy.database_connector.DatabaseConnector')
+        wt.model.db = db
+
+        return wt
 
 # ============= EOF =============================================

@@ -19,6 +19,7 @@ from envisage.core_plugin import CorePlugin
 from envisage.ui.tasks.tasks_plugin import TasksPlugin
 
 from wellpy.application import WellpyApplication
+from wellpy.tasks.database.plugin import DatabasePlugin
 from wellpy.tasks.plugin import WellpyPlugin
 
 
@@ -31,8 +32,10 @@ def launch():
     root.addHandler(shandler)
 
     plugins = [CorePlugin(),
+               DatabasePlugin(),
                WellpyPlugin(),
-               TasksPlugin()]
+               TasksPlugin(),
+               ]
 
     app = WellpyApplication(plugins=plugins)
 

@@ -14,6 +14,26 @@
 # limitations under the License.
 # ===============================================================================
 
-DATABSE_DEBUG = False
-FILE_DEBUG = '/Users/ross/Sandbox/wellpydata/1_mg-030_danielson_wel_170118081630_D7259.csv'
+from envisage.plugin import Plugin
+from envisage.service_offer import ServiceOffer
+from traits.api import List
+
+from wellpy.database_connector import DatabaseConnector
+from wellpy.tasks.database.preferences import DatabasePreferencesPane
+
+
+class DatabasePlugin(Plugin):
+    preferences = List(contributes_to='envisage.preferences')
+    preferences_panes = List(contributes_to='envisage.ui.tasks.preferences_panes')
+
+    service_offers = List(contributes_to='envisage.service_offers')
+
+    def _service_offers_default(self):
+        so1 = ServiceOffer(protocol='wellpy.database_connector.DatabaseConnector',
+                           factory=DatabaseConnector)
+        return [so1]
+
+    def _preferences_panes_default(self):
+        return [DatabasePreferencesPane]
+
 # ============= EOF =============================================

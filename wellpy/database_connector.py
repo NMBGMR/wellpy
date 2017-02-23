@@ -14,6 +14,10 @@
 # limitations under the License.
 # ===============================================================================
 import pymssql
+
+from datetime import datetime
+
+from apptools.preferences.preference_binding import bind_preference
 from traits.api import HasTraits, Str
 
 
@@ -61,27 +65,45 @@ class PointIDRecord(HasTraits):
     def __init__(self, name, install_date, serial_num):
         self.name = name
         self.install_date = install_date
-        self.serial_num = serial_num
+        self.serial_num = serial_num or ''
 
 
-class DatabaseConnector:
-    _host = ''
-    _user = ''
-    _dbname = ''
-    _password = ''
+class DatabaseConnector(HasTraits):
+    _host = Str
+    _user = Str
+    _dbname = Str
+    _password = Str
+
+    def __init__(self, bind=True, *args, **kw):
+        super(DatabaseConnector, self).__init__(*args, **kw)
+
+        pref_id = 'wellpy.database'
+        if bind:
+            bind_preference(self, '_host', '{}.host'.format(pref_id))
+            bind_preference(self, '_user', '{}.username'.format(pref_id))
+            bind_preference(self, '_password', '{}.password'.format(pref_id))
+            bind_preference(self, '_dbname', '{}.name'.format(pref_id))
 
     def get_point_ids(self):
         with self._get_cursor() as cursor:
             cursor.execute('GetPointIDsPython')
             return [PointIDRecord(*r) for r in cursor.fetchall()]
 
-    def get_manual_measurements(self, point_id):
+    def get_depth_to_sensor(self, point_id):
         with self._get_cursor() as cursor:
-            pass
+            cursor.execute('GetWaterLevelsPython %s', (point_id,))
+            return cursor.fetchall()
 
-    def get_date_range(self, point_id, low, high):
+    def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
         with self._get_cursor() as cursor:
-            pass
+            cmd, args = 'GetWaterLevelsContinuousPython %s', (point_id,)
+
+            if low or high or qced is not None:
+                args = (point_id, low, high, qced)
+                cmd = '{}, %s, %s, %d'.format(cmd)
+            print '-------------', cmd, args
+            cursor.execute(cmd, args)
+            return cursor.fetchall()
 
     def _get_cursor(self):
         return SessionCTX(self._host, self._user, self._password, self._dbname)
@@ -95,6 +117,27 @@ if __name__ == '__main__':
     d._user = os.getenv('NM_AQUIFER_USER')
     d._password = os.getenv('NM_AQUIFER_PASSWORD')
     d._dbname = 'NM_Aquifer'
-    for pi in d.get_point_ids():
-        print pi
+    # for pi in d.get_point_ids():
+    #     print pi.name, len(d.get_depth_to_sensor(pi.name)), len(d.get_continuous_water_levels(pi.name))
+    name = 'TV-121'
+    print d.get_point_ids()
+
+    # print name, len(d.get_depth_to_sensor(name)), len(d.get_continuous_water_levels(name))
+    # for p in d.get_continuous_water_levels(name, low='2016-01-01T00:00:00.000',
+    #                                        high='2016-01-01T00:00:00.000',
+    #                                        qced=1)[:10]:
+    #     print p
+    r = d.get_continuous_water_levels(name, qced=None)
+    print 'qced=None', len(r)
+
+    r = d.get_continuous_water_levels(name, qced=1)
+    print 'qced=1',len(r)
+
+    r = d.get_continuous_water_levels(name, qced=0)
+    print 'qced=0',len(r)
+
+    # r = d.get_continuous_water_levels(name, low='2014-01-01T00:00:00.000',
+    #                                        high='2016-01-01T00:00:00.000',
+    #                                        qced=1)
+    # print len(r)
 # ============= EOF =============================================

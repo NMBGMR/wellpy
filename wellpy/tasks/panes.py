@@ -29,7 +29,12 @@ from wellpy.sigproc import SMOOTH_METHODS
 
 
 class PointIDAdapter(TabularAdapter):
-    columns = [('Name', 'name')]
+    columns = [('Name', 'name'),
+               ('DateInstalled', 'install_date'),
+               ('Serial', 'serial_num')]
+
+    name_width = Int(60)
+    font = 'arial 10'
 
 
 class WellCentralPane(TraitsTaskPane):
@@ -44,7 +49,7 @@ class ToolboxPane(TraitsDockPane):
     name = 'Toolbox'
     fix_data_button = Button('Fix Data')
     constant_offset = Float
-    threshold = Float(1)
+    threshold = Float(0.25)
 
     smooth_data_button = Button('Smooth')
     window = Int(11)
@@ -82,7 +87,7 @@ class ToolboxPane(TraitsDockPane):
 
 class AutoResultsTabularAdapter(TabularAdapter):
     columns = [('Start', 'start'),
-               ('End','end'),
+               ('End', 'end'),
                ('Offset', 'offset')]
 
     # start_text = Property
@@ -92,7 +97,7 @@ class AutoResultsTabularAdapter(TabularAdapter):
 
 class AutoResultsPane(TraitsDockPane):
     id = 'wellpy.autoresults.pane'
-    name='AutoResults'
+    name = 'AutoResults'
 
     def traits_view(self):
         v = View(UItem('auto_results', editor=TabularEditor(adapter=AutoResultsTabularAdapter())))

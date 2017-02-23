@@ -14,6 +14,8 @@
 # limitations under the License.
 # ===============================================================================
 
-DATABSE_DEBUG = False
-FILE_DEBUG = '/Users/ross/Sandbox/wellpydata/1_mg-030_danielson_wel_170118081630_D7259.csv'
+# ============= enthought library imports =======================
+# ============= standard library imports ========================
+# ============= local library imports  ==========================
+
 # ============= EOF =============================================

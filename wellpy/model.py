@@ -31,7 +31,8 @@ from numpy import array, diff, where, ones, logical_and, hstack, zeros_like
 from globals import DATABSE_DEBUG
 from wellpy.config import config
 from wellpy.data_model import DataModel
-from wellpy.database_connector import DatabaseConnector
+from wellpy.database_connector import DatabaseConnector, PointIDRecord
+from wellpy.fuzzyfinder import fuzzyfinder
 from wellpy.nm_well_database import NMWellDatabase
 from wellpy.range_overlay import RangeOverlay
 from wellpy.tools import DataTool, DataToolOverlay
@@ -95,14 +96,15 @@ class WellpyModel(HasTraits):
     measurement_methods = List
 
     auto_results = List
-    db = Instance(DatabaseConnector, ())
+    db = Instance(DatabaseConnector)
 
     def activated(self):
-        pids = self.db.get_point_ids()
         if DATABSE_DEBUG:
             pids = ['A', 'B', 'C']
-
-        self.point_ids = [PointIDRecord(name=p) for p in pids]
+            self.point_ids = [PointIDRecord(p, '', '') for p in pids]
+        else:
+            pids = self.db.get_point_ids()
+            self.point_ids = pids
 
     def retrieve_depth_to_sensor(self):
         """
@@ -298,7 +300,9 @@ class WellpyModel(HasTraits):
 
     # property get/set
     def _get_filtered_point_ids(self):
-        return [p for p in self.point_ids if p.name.startswith(self.point_id_entry)]
+
+        return fuzzyfinder(self.point_id_entry, self.point_ids, 'name')
+        # return [p for p in self.point_ids if p.name.startswith(self.point_id_entry)]
 
     def _get_filename(self):
         return os.path.basename(self.path)

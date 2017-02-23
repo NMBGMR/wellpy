@@ -16,7 +16,8 @@
 import os
 
 from chaco.plot_containers import VPlotContainer
-from pyface.tasks.action.schema import SMenu, SMenuBar
+from envisage.ui.tasks.action.preferences_action import PreferencesAction
+from pyface.tasks.action.schema import SMenu, SMenuBar, SGroup
 from pyface.tasks.action.task_action import TaskAction
 from pyface.tasks.task_layout import PaneItem, TaskLayout, VSplitter
 from traits.api import List, Str, HasTraits, Instance, Property, Button
@@ -67,13 +68,14 @@ class WellpyTask(Task):
         #     name='&Entry')
 
         file_menu = SMenu(
-            # SGroup(id='Open'),
+            SGroup(id='Open'),
             # SGroup(id='New'),
             # SGroup(
             #     GenericSaveAsAction(),
             #     GenericSaveAction(),
             #     id='Save'),
             # SGroup(),
+            PreferencesAction(),
             id='file.menu', name='File')
 
         window_menu = SMenu(ResetLayoutAction(),
