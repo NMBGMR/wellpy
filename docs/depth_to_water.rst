@@ -24,12 +24,12 @@ Depth To Water
 .. math:: d(t) = L - h
    :label: corrected_no_drift
 
-.. math:: d(t) = L' - h
+.. math:: d(t) = l(t) - h
    :label: corrected_drift
 
-where :math:`L'`
+where :math:`l(t)`
 
-.. math:: L' = L_{1} - \frac{(L_{1}-L_{0})}{(t_{1}-t_{0})}*(t-t_{0})
+.. math:: l(t) = L_{0} + \frac{(L_{1}-L_{0})}{(t_{1}-t_{0})}*(t-t_{0})
   :label: drift_l
 
 To calculate `depth_to_water` at a given time `t` use :eq:`corrected_no_drift`

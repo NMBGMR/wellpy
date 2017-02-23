@@ -35,8 +35,8 @@ class DataModel:
     water_head = None
     filtered_zeros = None
     serial_number = None
-    sensor_depth_x = None
-    sensor_depth_y = None
+    water_depth_x = None
+    water_depth_y = None
     depth_to_water_x = None
     depth_to_water_y = None
 
@@ -45,8 +45,8 @@ class DataModel:
         if os.path.isfile(path):
             self._load(path)
 
-        self.sensor_depth_x = array([])
-        self.sensor_depth_y = array([])
+        self.water_depth_x = array([])
+        self.water_depth_y = array([])
         self.depth_to_water_x = array([])
         self.depth_to_water_y = array([])
 

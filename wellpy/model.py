@@ -47,7 +47,6 @@ class NoSelectionError(BaseException):
 WATER_HEAD = 'water_head'
 ADJ_WATER_HEAD = 'adjusted_water_head'
 DEPTH_TO_SENSOR = 'depth_to_sensor'
-DEPTH_TO_SENSOR_SCATTER = 'depth_to_sensor_scatter'
 DEPTH_TO_WATER = 'depth_to_water'
 WATER_LEVEL = 'water_level'
 
@@ -109,104 +108,92 @@ class WellpyModel(HasTraits):
             self.point_ids = pids
         self.selected_point_id = self.point_ids[0]
 
-    def retrieve_depth_to_sensor(self):
+    def retrieve_depth_to_water(self):
         """
         retrieve the depth to sensor measurements from database for selected_pointID
         :return:
         """
 
         pid = self.selected_point_id
-        ms = self.db.get_depth_to_sensor(pid.name)
+        ms = self.db.get_depth_to_water(pid.name)
         # print ms
 
         # def factory(mm):
         #     sd = SensorDepth()
         #     return sd
 
+        max_x = self.data_model.x[-1]
         xs, ys = array(sorted([mi.measurement for mi in ms],
                               # reverse=True,
                               key=lambda x: x[0])).T
+        idx = where(xs <= max_x)[0]
+        idx = hstack((idx, idx[-1] + 1))
 
-        plot = self._plots[DEPTH_TO_SENSOR]
-        # plot.data.set_data('sensor_depth_x', )
-        # plot.data.set_data('sensor_depth_x', dd)
-        self.data_model.sensor_depth_x = xs
-        self.data_model.sensor_depth_y = ys
+        xs = xs[idx]
+        ys = ys[idx]
 
-        plot_needed = 'sensor_depth_x' not in plot.data.arrays
-        plot.data.set_data('sensor_depth_x', xs)
-        plot.data.set_data('sensor_depth_y', ys)
-        if plot_needed:
-            plot.plot(('sensor_depth_x', 'sensor_depth_y'),
-                      render_style='connectedhold',
-                      line_style='dash',
-                      color='blue', line_width=1.5)
-            plot.plot(('sensor_depth_x', 'sensor_depth_y'),
-                      # render_style='connected',
-                      color='blue', line_width=1.5)
+        plot = self._plots[DEPTH_TO_WATER]
+        self.data_model.water_depth_x = xs
+        self.data_model.water_depth_y = ys
+
+        plot.data.set_data('water_depth_x', xs)
+        plot.data.set_data('water_depth_y', ys)
+
         self.refresh_plot()
 
-    def calculate_depth_to_water(self, correct_drift=True):
+    def calculate_depth_to_water(self, correct_drift=False):
         """
-        calculate depth to water
-        ------------------------------------------------------
-        |           |   |
-        |           |   |
-        |           |   |
-        |           |   |    depth_to_water == d
-        |           |   |                                     manual_measurement
-        |           |   |
-        |           |   |
-        ~~~~~~~~~~~ | -------
-        |           |
-        |           |        adjusted_water_head
-        |           |
-        |-----------| ------- --------------------------------
-
-
-        w/o drift
-        d(t) = manual_measurement - adjusted_water_head
-
-        w/drift
-        d(t) = (manual_measurement_1 - m(t-t_0)) - adjusted_water_head
-        where m = dL/dt == (manual_measurement_1 - manual_measurement_0) / (t_1 - t_0)
-
 
         :return:
         """
 
-        def calculated_dtw_bin(l1, l0, x, h):
+        def calculated_dtw_bin(d1, d0, x, h):
+            l1 = d1 + h[-1]
+            l0 = d0 + h[0]
+
             l = l1 * ones(h.shape[0])
             if correct_drift:
-                to = x[0]
-                m = (l1 - l0) / (x[-1] - to)
-                l = [l1 - m * (t - to) for t in x]
+                m = (l1 - l0) / (x[-1] - x[0])
+                # l = [l1 - m * (t - x[0]) for t in x]
+                l = l0 + m * (x - x[0])
 
             dtw = l - h
-            return dtw
+            return dtw, l
 
         ah = self.data_model.adjusted_water_head
         xs = self.data_model.x
 
-        # ds = self.data_model.depth_to_sensor
-        ds = column_stack((self.data_model.sensor_depth_x, self.data_model.sensor_depth_y))[::-1]
+        # ds = self.data_model.depth_to_water
+        ds = column_stack((self.data_model.water_depth_x, self.data_model.water_depth_y))
 
         dd = zeros_like(ah)
-        for i in xrange(len(ds) - 1, 0, -1):
-            m1, m0 = ds[i], ds[i - 1]
-            mask = where(logical_and(xs <= m0[0], xs >= m1[0]))[0]
+        ddd = zeros_like(ah)
+        for i in xrange(len(ds) - 1):
+            m0, m1 = ds[i], ds[i + 1]
+            mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
             if mask.any():
-                dd[mask] = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
+                v, l = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
+                dd[mask] = v
+                ddd[mask] = l
 
         plot = self._plots[WATER_LEVEL]
+        # plot_needed = 'depth_x' not in plot.data.arrays
+        plot.data.set_data('depth_x', xs)
+        plot.data.set_data('depth_y', dd)
 
-        plot_needed = 'depth_to_water_x' not in plot.data.arrays
-        plot.data.set_data('depth_to_water_x', xs)
-        plot.data.set_data('depth_to_water_y', dd)
+        # if plot_needed:
+        #     plot.plot(('depth_x', 'depth_to_water_y'),
+        #               line_width=1.5)
 
-        if plot_needed:
-            plot.plot(('depth_to_water_x', 'depth_to_water_y'),
-                      line_width=1.5)
+        plot = self._plots[DEPTH_TO_SENSOR]
+        # plot_needed = 'depth_to_sensor_x' not in plot.data.arrays
+        plot.data.set_data('depth_sensor_x', xs)
+        plot.data.set_data('depth_sensor_y', ddd)
+
+        # if plot_needed:
+        #     plot.plot(('depth_to_sensor_x', 'depth_to_sensor_y'),
+        #               color='red',
+        #               line_width=1.5)
 
         self.refresh_plot()
 
@@ -221,13 +208,13 @@ class WellpyModel(HasTraits):
         self.auto_results = [AutoResult(*fi) for fi in fs]
 
         # plot fixed ranges on raw plot
-        plot = self._plots[WATER_HEAD]
-        plot.auto_fixed_range_overlay.ranges = fs
+        # plot = self._plots[WATER_HEAD]
+        # plot.auto_fixed_range_overlay.ranges = fs
 
         # update adjusted head
         self.data_model.adjusted_water_head = ys
         plot = self._plots[ADJ_WATER_HEAD]
-        plot.data.set_data('y', ys)
+        plot.data.set_data('adjusted_water_head_y', ys)
 
         self.refresh_plot()
 
@@ -268,7 +255,7 @@ class WellpyModel(HasTraits):
                 self.selected_point_id = point_ids[-1]
                 self.scroll_to_row = self.point_ids.index(self.selected_point_id)
 
-                self.retrieve_depth_to_sensor()
+                self.retrieve_depth_to_water()
 
             else:
                 information(None, 'Serial number="{}"  not in database')
@@ -277,17 +264,17 @@ class WellpyModel(HasTraits):
         container = self.plot_container
         self._plots = {}
 
-        padding = [70, 10, 10, 10]
+        padding = [70, 10, 5, 5]
 
         plot = self._add_adjusted_water_head(padding)
         index_range = plot.index_range
         container.add(plot)
+        #
+        # plot = self._add_water_head(padding)
+        # plot.index_range = index_range
+        # container.add(plot)
 
-        plot = self._add_water_head(padding)
-        plot.index_range = index_range
-        container.add(plot)
-
-        plot = self._add_sensor_depth(padding)
+        plot = self._add_water_depth(padding)
         plot.index_range = index_range
         container.add(plot)
 
@@ -295,18 +282,50 @@ class WellpyModel(HasTraits):
         plot.index_range = index_range
         container.add(plot)
 
+        plot = self._add_depth_to_sensor(padding)
+        plot.index_range = index_range
+        container.add(plot)
+
         self.refresh_plot()
 
     def _add_depth_to_water(self, padding):
-        plot, line, scatter = self._add_line_scatter('depth_to_water_y', 'Water Level BGS', padding,
-                                                     x=self.data_model.depth_to_water_x)
+        xkey, ykey = 'depth_x', 'depth_y'
+        pd = self._plot_data((xkey, []),
+                             (ykey, []))
+
+        plot = Plot(data=pd, padding=padding)
+        plot.y_axis.title = 'Water BGS'
+
+        plot.plot((xkey, ykey))[0]
         plot.x_axis.visible = False
         self._plots[WATER_LEVEL] = plot
+        return plot
 
+    def _add_depth_to_sensor(self, padding):
+        xkey, ykey = 'depth_sensor_x', 'depth_sensor_y'
+        pd = self._plot_data((xkey, []),
+                             (ykey, []))
+
+        plot = Plot(data=pd, padding=padding)
+        plot.y_axis.title = 'Sensor BGS'
+
+        plot.plot((xkey, ykey))[0]
+        plot.x_axis.visible = False
+        self._plots[DEPTH_TO_SENSOR] = plot
         return plot
 
     def _add_water_head(self, padding):
-        plot, line, scatter = self._add_line_scatter('water_head', 'Water Head', padding)
+        # plot, line, scatter = self._add_line_scatter('water_head', 'Water Head', padding)
+
+        data = self.data_model
+        xkey, ykey = 'water_head_x', 'water_head_y'
+        pd = self._plot_data((xkey, data.x),
+                             (ykey, data.water_head))
+
+        plot = Plot(data=pd, padding=padding)
+        plot.y_axis.title = 'Head'
+
+        plot.plot((xkey, ykey))[0]
         plot.x_axis.visible = False
         # add overlays
         o = RangeOverlay(plot=plot)
@@ -316,52 +335,82 @@ class WellpyModel(HasTraits):
         return plot
 
     def _add_adjusted_water_head(self, padding):
-        plot, line, scatter = self._add_line_scatter('adjusted_water_head', 'Adj. Water Head', padding)
+        data = self.data_model
+        xkey, ykey = 'adjusted_water_head_x', 'adjusted_water_head_y'
+        pd = self._plot_data((xkey, data.x),
+                             (ykey, data.adjusted_water_head))
+
+        plot = Plot(data=pd, padding=padding)
+
         bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
                                tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
-        plot.x_axis = bottom_axis
         plot.padding_bottom = 50
-
-        pt = PanTool(component=plot)
-        plot.tools.append(pt)
-
+        plot.x_axis = bottom_axis
+        plot.y_axis.title = 'Adjusted Head'
+        plot.plot((xkey, ykey))[0]
         self._plots[ADJ_WATER_HEAD] = plot
         return plot
 
-    def _add_sensor_depth(self, padding):
-        x = self.data_model.sensor_depth_x
+    def _add_water_depth(self, padding):
+        x = self.data_model.water_depth_x
+        y = self.data_model.water_depth_y
 
-        plot, line, scatter = self._add_line_scatter('sensor_depth_y', 'SensorBGS', padding, x=x)
+        # plot, line, scatter = self._add_line_scatter('', 'Manual BGS', padding, x=x)
+        xkey, ykey = 'water_depth_x', 'water_depth_y'
+        pd = self._plot_data((xkey, x),
+                             (ykey, y))
+        plot = Plot(data=pd, padding=padding)
+
+        plot.y_axis.title = 'Manual Water BGS'
         plot.x_axis.visible = False
-
-        self._plots[DEPTH_TO_SENSOR] = plot
+        plot.plot((xkey, ykey))[0]
+        self._plots[DEPTH_TO_WATER] = plot
         return plot
 
-    def _add_line_scatter(self, key, title, padding, x=None):
-        data = self.data_model
-        if x is None:
-            x = data.x
+    def _plot_data(self, x, y):
+        pd = ArrayPlotData()
+        # setattr(pd, x[0], x[1])
+        # setattr(pd, y[0], y[1])
+        # print x[0], getattr(pd, x[0])
+        # print y[0], getattr(pd, y[0])
+        pd.set_data(x[0], x[1])
+        pd.set_data(y[0], y[1])
+        return pd
 
-        pd = ArrayPlotData(x=x, y=getattr(data, key))
-        plot = Plot(data=pd, padding=padding)
-        plot.y_axis.title = title
-
-        line = plot.plot(('x', 'y'))[0]
-        scatter = plot.plot(('x', 'y'), marker_size=1.5, type='scatter')
-
-        dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
-        dto = DataToolOverlay(component=line, tool=dt)
-        line.tools.append(dt)
-        line.overlays.append(dto)
-
-        zoom = ZoomTool(plot,
-                        # tool_mode="range",
-                        axis='index',
-                        color=(0, 1, 0, 0.5),
-                        enable_wheel=False,
-                        always_on=False)
-        plot.overlays.append(zoom)
-        return plot, line, scatter
+    # def _add_line_scatter(self, key, title, padding, x=None):
+    #     data = self.data_model
+    #     pd = ArrayPlotData()
+    #     xkey, ykey = 'x', 'y'
+    #     if key:
+    #         ykey = key
+    #         # xkey = '{}_x'.format(key)
+    #         # ykey = '{}_y'.format(key)
+    #         # if x is None:
+    #         # else:
+    #         #     setattr(pd, xkey, getattr(data, xkey))
+    #         pd.x = data.x
+    #         setattr(pd, ykey, getattr(data, ykey))
+    #
+    #     plot = Plot(data=pd, padding=padding)
+    #     plot.y_axis.title = title
+    #     print xkey, xkey
+    #
+    #     line = plot.plot((xkey, ykey))[0]
+    #     scatter = plot.plot((xkey, ykey), marker_size=1.5, type='scatter')
+    #
+    #     dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
+    #     dto = DataToolOverlay(component=line, tool=dt)
+    #     line.tools.append(dt)
+    #     line.overlays.append(dto)
+    #
+    #     zoom = ZoomTool(plot,
+    #                     # tool_mode="range",
+    #                     axis='index',
+    #                     color=(0, 1, 0, 0.5),
+    #                     enable_wheel=False,
+    #                     always_on=False)
+    #     plot.overlays.append(zoom)
+    #     return plot, line, scatter
 
     def _plot_container_default(self):
         pc = VPlotContainer()

@@ -67,7 +67,7 @@ class PointIDRecord(HasTraits):
         self.serial_num = serial_num or ''
 
 
-class SensorDepthRecord(HasTraits):
+class WaterDepthRecord(HasTraits):
     uuid = Str
     point_id = Str
     # measurement_date = None
@@ -75,7 +75,7 @@ class SensorDepthRecord(HasTraits):
     # depth = Float
 
     def __init__(self, uuid, point_id, measurement_date, depth, level_status, *args, **kw):
-        super(SensorDepthRecord, self).__init__(*args, **kw)
+        super(WaterDepthRecord, self).__init__(*args, **kw)
         # self.depth = depth
         self.uuid = str(uuid)
         self.point_id = point_id
@@ -105,10 +105,10 @@ class DatabaseConnector(HasTraits):
             cursor.execute('GetPointIDsPython')
             return [PointIDRecord(*r) for r in cursor.fetchall()]
 
-    def get_depth_to_sensor(self, point_id):
+    def get_depth_to_water(self, point_id):
         with self._get_cursor() as cursor:
             cursor.execute('GetWaterLevelsPython %s', (point_id,))
-            return [SensorDepthRecord(*r) for r in cursor.fetchall()]
+            return [WaterDepthRecord(*r) for r in cursor.fetchall()]
 
     def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
         with self._get_cursor() as cursor:
@@ -134,11 +134,11 @@ if __name__ == '__main__':
     d._password = os.getenv('NM_AQUIFER_PASSWORD')
     d._dbname = 'NM_Aquifer'
     # for pi in d.get_point_ids():
-    #     print pi.name, len(d.get_depth_to_sensor(pi.name)), len(d.get_continuous_water_levels(pi.name))
+    #     print pi.name, len(d.get_depth_to_water(pi.name)), len(d.get_continuous_water_levels(pi.name))
     name = 'TV-121'
     print d.get_point_ids()
 
-    # print name, len(d.get_depth_to_sensor(name)), len(d.get_continuous_water_levels(name))
+    # print name, len(d.get_depth_to_water(name)), len(d.get_continuous_water_levels(name))
     # for p in d.get_continuous_water_levels(name, low='2016-01-01T00:00:00.000',
     #                                        high='2016-01-01T00:00:00.000',
     #                                        qced=1)[:10]:

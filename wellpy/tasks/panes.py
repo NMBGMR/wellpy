@@ -20,7 +20,7 @@ from pyface.constant import OK
 from pyface.file_dialog import FileDialog
 from pyface.tasks.traits_dock_pane import TraitsDockPane
 from pyface.tasks.traits_task_pane import TraitsTaskPane
-from traits.api import Button, Float, Property, Int, Enum
+from traits.api import Button, Float, Property, Int, Enum, Bool
 from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring, EnumEditor
 from traitsui.tabular_adapter import TabularAdapter
 
@@ -56,6 +56,7 @@ class ToolboxPane(TraitsDockPane):
     method = Enum(SMOOTH_METHODS)
 
     calculate_button = Button('Calculate')
+    correct_drift = Bool
 
     def _constant_offset_changed(self, new):
         self.model.apply_constant_offset(new)
@@ -67,7 +68,7 @@ class ToolboxPane(TraitsDockPane):
         self.model.smooth_data(self.window, self.method)
 
     def _calculate_button_fired(self):
-        self.model.calculate_depth_to_water()
+        self.model.calculate_depth_to_water(self.correct_drift)
 
     def traits_view(self):
         manual_grp = VGroup(Item('pane.constant_offset', label='Constant Offset'),
@@ -80,8 +81,13 @@ class ToolboxPane(TraitsDockPane):
                             show_border=True,
                             label='Smooth')
 
-        calculate_grp = VGroup(UItem('pane.calculate_button'))
-        v = View(VGroup(manual_grp, auto_grp, smooth_grp, calculate_grp))
+        calculate_grp = VGroup(Item('pane.correct_drift'),
+                               UItem('pane.calculate_button'),
+                               label='Depth To Water',
+                               show_border=True)
+        v = View(VGroup(
+            # manual_grp,
+                        auto_grp, smooth_grp, calculate_grp))
         return v
 
 
@@ -108,10 +114,10 @@ class WellPane(TraitsDockPane):
     id = 'wellpy.well.pane'
     name = 'Well'
     open_file_button = Button('Open')
-    retrieve_depth_to_sensor_button = Button('Retrieve')
+    retrieve_depth_to_water_button = Button('Retrieve')
 
-    def _retrieve_depth_to_sensor_button_fired(self):
-        self.model.retrieve_depth_to_sensor()
+    def _retrieve_depth_to_water_button_fired(self):
+        self.model.retrieve_depth_to_water()
 
     def _open_file_button_fired(self):
 
@@ -133,7 +139,7 @@ class WellPane(TraitsDockPane):
                                                      editable=False,
                                                      scroll_to_row='scroll_to_row',
                                                      adapter=PointIDAdapter())),
-                          UItem('pane.retrieve_depth_to_sensor_button',
+                          UItem('pane.retrieve_depth_to_water_button',
                                 enabled_when='selected_point_id'),
                           show_border=True,
                           label='Site')
