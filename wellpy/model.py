@@ -28,7 +28,7 @@ from pyface.message_dialog import information, warning
 from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
-from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack
+from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray
 
 from globals import DATABSE_DEBUG
 from wellpy.config import config
@@ -39,16 +39,36 @@ from wellpy.nm_well_database import NMWellDatabase
 from wellpy.range_overlay import RangeOverlay
 from wellpy.tools import DataTool, DataToolOverlay
 
+DEPTH_TO_WATER_TITLE = 'Water BGS'
+SENSOR_TITLE = 'Sensor BGS'
+HEAD_TITLE = 'Head'
+ADJUSTED_HEAD_TITLE = 'Adjusted Head'
+MANUAL_WATER_DEPTH_TITLE = 'Manual Water BGS'
 
-class NoSelectionError(BaseException):
-    pass
+WATER_DEPTH_Y = 'water_depth_y'
+WATER_DEPTH_X = 'water_depth_x'
 
+ADJUSTED_WATER_HEAD_Y = 'adjusted_water_head_y'
+ADJUSTED_WATER_HEAD_X = 'adjusted_water_head_x'
+
+WATER_HEAD_Y = 'water_head_y'
+WATER_HEAD_X = 'water_head_x'
+
+DEPTH_SENSOR_Y = 'depth_sensor_y'
+DEPTH_SENSOR_X = 'depth_sensor_x'
+
+DEPTH_Y = 'depth_y'
+DEPTH_X = 'depth_x'
 
 WATER_HEAD = 'water_head'
 ADJ_WATER_HEAD = 'adjusted_water_head'
 DEPTH_TO_SENSOR = 'depth_to_sensor'
 DEPTH_TO_WATER = 'depth_to_water'
 WATER_LEVEL = 'water_level'
+
+
+class NoSelectionError(BaseException):
+    pass
 
 
 class AutoResult(HasTraits):
@@ -132,12 +152,12 @@ class WellpyModel(HasTraits):
         xs = xs[idx]
         ys = ys[idx]
 
-        plot = self._plots[DEPTH_TO_WATER]
+        plot = self._plots[WATER_LEVEL]
         self.data_model.water_depth_x = xs
         self.data_model.water_depth_y = ys
 
-        plot.data.set_data('water_depth_x', xs)
-        plot.data.set_data('water_depth_y', ys)
+        plot.data.set_data(WATER_DEPTH_X, xs)
+        plot.data.set_data(WATER_DEPTH_Y, ys)
 
         self.refresh_plot()
 
@@ -176,34 +196,26 @@ class WellpyModel(HasTraits):
                 dd[mask] = v
                 ddd[mask] = l
 
-        plot = self._plots[WATER_LEVEL]
-        # plot_needed = 'depth_x' not in plot.data.arrays
-        plot.data.set_data('depth_x', xs)
-        plot.data.set_data('depth_y', dd)
-
-        # if plot_needed:
-        #     plot.plot(('depth_x', 'depth_to_water_y'),
-        #               line_width=1.5)
+        plot = self._plots[DEPTH_TO_WATER]
+        plot.data.set_data(DEPTH_X, xs)
+        plot.data.set_data(DEPTH_Y, dd)
 
         plot = self._plots[DEPTH_TO_SENSOR]
-        # plot_needed = 'depth_to_sensor_x' not in plot.data.arrays
-        plot.data.set_data('depth_sensor_x', xs)
-        plot.data.set_data('depth_sensor_y', ddd)
+        plot.data.set_data(DEPTH_SENSOR_X, xs)
+        plot.data.set_data(DEPTH_SENSOR_Y, ddd)
 
-        # if plot_needed:
-        #     plot.plot(('depth_to_sensor_x', 'depth_to_sensor_y'),
-        #               color='red',
-        #               line_width=1.5)
+        self.data_model.depth_to_water_x = xs
+        self.data_model.depth_to_water_y = dd
 
         self.refresh_plot()
 
-    def fix_data(self, threshold):
+    def fix_adj_head_data(self, threshold):
         """
         automatically remove offsets and zeros
         :param threshold:
         :return:
         """
-        ys = self.data_model.get_water_head()
+        ys = self.data_model.water_head
         ys, zs, fs = self.data_model.fix_data(ys, threshold)
         self.auto_results = [AutoResult(*fi) for fi in fs]
 
@@ -215,6 +227,14 @@ class WellpyModel(HasTraits):
         self.data_model.adjusted_water_head = ys
         plot = self._plots[ADJ_WATER_HEAD]
         plot.data.set_data('adjusted_water_head_y', ys)
+        self.refresh_plot()
+
+    def fix_depth_to_water_data(self, threshold):
+        ys = self.data_model.depth_to_water_y
+        if ys.any():
+            ys, zs, fs = self.data_model.fix_data(ys, threshold)
+            plot = self._plots[DEPTH_TO_WATER]
+            plot.data.set_data(DEPTH_Y, ys)
 
         self.refresh_plot()
 
@@ -266,89 +286,81 @@ class WellpyModel(HasTraits):
 
         padding = [70, 10, 5, 5]
 
-        plot = self._add_adjusted_water_head(padding)
-        index_range = plot.index_range
-        container.add(plot)
-        #
-        # plot = self._add_water_head(padding)
-        # plot.index_range = index_range
-        # container.add(plot)
+        funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
+                 (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
+                 (ADJ_WATER_HEAD, self._add_adjusted_water_head),
+                 (WATER_LEVEL, self._add_water_depth),)
 
-        plot = self._add_water_depth(padding)
-        plot.index_range = index_range
-        container.add(plot)
+        index_range = None
+        for i, (k, f) in enumerate(funcs):
+            plot = f(padding)
+            if i == 0:
+                bottom_axis = PlotAxis(plot, orientation='bottom',  # mapper=xmapper,
+                                       tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
+                plot.padding_bottom = 50
+                plot.x_axis = bottom_axis
+            else:
+                plot.index_range = index_range
+                plot.x_axis.visible = False
 
-        plot = self._add_depth_to_water(padding)
-        plot.index_range = index_range
-        container.add(plot)
-
-        plot = self._add_depth_to_sensor(padding)
-        plot.index_range = index_range
-        container.add(plot)
+            index_range = plot.index_range
+            container.add(plot)
+            self._plots[k] = plot
 
         self.refresh_plot()
 
     def _add_depth_to_water(self, padding):
-        xkey, ykey = 'depth_x', 'depth_y'
-        pd = self._plot_data((xkey, []),
-                             (ykey, []))
+        pd = self._plot_data((DEPTH_X, []),
+                             (DEPTH_Y, []))
 
         plot = Plot(data=pd, padding=padding)
-        plot.y_axis.title = 'Water BGS'
+        plot.y_axis.title = DEPTH_TO_WATER_TITLE
 
-        plot.plot((xkey, ykey))[0]
-        plot.x_axis.visible = False
-        self._plots[WATER_LEVEL] = plot
+        plot.plot((DEPTH_X, DEPTH_Y))[0]
+        # self._plots[WATER_LEVEL] = plot
         return plot
 
     def _add_depth_to_sensor(self, padding):
-        xkey, ykey = 'depth_sensor_x', 'depth_sensor_y'
-        pd = self._plot_data((xkey, []),
-                             (ykey, []))
+        pd = self._plot_data((DEPTH_SENSOR_X, []),
+                             (DEPTH_SENSOR_Y, []))
 
         plot = Plot(data=pd, padding=padding)
-        plot.y_axis.title = 'Sensor BGS'
+        plot.y_axis.title = SENSOR_TITLE
 
-        plot.plot((xkey, ykey))[0]
-        plot.x_axis.visible = False
-        self._plots[DEPTH_TO_SENSOR] = plot
+        plot.plot((DEPTH_SENSOR_X, DEPTH_SENSOR_Y))[0]
+
+        # self._plots[DEPTH_TO_SENSOR] = plot
         return plot
 
     def _add_water_head(self, padding):
         # plot, line, scatter = self._add_line_scatter('water_head', 'Water Head', padding)
 
         data = self.data_model
-        xkey, ykey = 'water_head_x', 'water_head_y'
-        pd = self._plot_data((xkey, data.x),
-                             (ykey, data.water_head))
+        pd = self._plot_data((WATER_HEAD_X, data.x),
+                             (WATER_HEAD_Y, data.water_head))
 
         plot = Plot(data=pd, padding=padding)
-        plot.y_axis.title = 'Head'
+        plot.y_axis.title = HEAD_TITLE
 
-        plot.plot((xkey, ykey))[0]
-        plot.x_axis.visible = False
+        plot.plot((WATER_HEAD_X, WATER_HEAD_Y))[0]
+        # plot.x_axis.visible = False
         # add overlays
         o = RangeOverlay(plot=plot)
         plot.auto_fixed_range_overlay = o
         plot.overlays.append(o)
-        self._plots[WATER_HEAD] = plot
+        # self._plots[WATER_HEAD] = plot
         return plot
 
     def _add_adjusted_water_head(self, padding):
         data = self.data_model
-        xkey, ykey = 'adjusted_water_head_x', 'adjusted_water_head_y'
-        pd = self._plot_data((xkey, data.x),
-                             (ykey, data.adjusted_water_head))
+        pd = self._plot_data((ADJUSTED_WATER_HEAD_X, data.x),
+                             (ADJUSTED_WATER_HEAD_Y, data.adjusted_water_head))
 
         plot = Plot(data=pd, padding=padding)
 
-        bottom_axis = PlotAxis(plot, orientation="bottom",  # mapper=xmapper,
-                               tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
-        plot.padding_bottom = 50
-        plot.x_axis = bottom_axis
-        plot.y_axis.title = 'Adjusted Head'
-        plot.plot((xkey, ykey))[0]
-        self._plots[ADJ_WATER_HEAD] = plot
+        plot.y_axis.title = ADJUSTED_HEAD_TITLE
+        plot.plot((ADJUSTED_WATER_HEAD_X, ADJUSTED_WATER_HEAD_Y))[0]
+        # self._plots[ADJ_WATER_HEAD] = plot
         return plot
 
     def _add_water_depth(self, padding):
@@ -356,15 +368,13 @@ class WellpyModel(HasTraits):
         y = self.data_model.water_depth_y
 
         # plot, line, scatter = self._add_line_scatter('', 'Manual BGS', padding, x=x)
-        xkey, ykey = 'water_depth_x', 'water_depth_y'
-        pd = self._plot_data((xkey, x),
-                             (ykey, y))
+        pd = self._plot_data((WATER_DEPTH_X, x),
+                             (WATER_DEPTH_Y, y))
         plot = Plot(data=pd, padding=padding)
 
-        plot.y_axis.title = 'Manual Water BGS'
-        plot.x_axis.visible = False
-        plot.plot((xkey, ykey))[0]
-        self._plots[DEPTH_TO_WATER] = plot
+        plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
+        plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y))[0]
+        # self._plots[DEPTH_TO_WATER] = plot
         return plot
 
     def _plot_data(self, x, y):

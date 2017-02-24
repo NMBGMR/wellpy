@@ -53,6 +53,9 @@ class DataModel:
     def get_water_head(self):
         return array(self._water_head)
 
+    def get_depth_to_water(self):
+        return array(self.depth_to_water_y)
+
     def smooth(self, ys, window, method):
 
         pys = smooth(ys, window, method)
@@ -61,17 +64,19 @@ class DataModel:
 
     def fix_data(self, ys, threshold):
         x = self.x
-
+        ys = array(ys[:])
         # find zeros
         zs = where(ys == 0)[0]
         fs = []
         while 1:
-            idxs = where(abs(diff(ys)) > threshold)[0]
+            idxs = where(abs(diff(ys)) >= threshold)[0]
             if not idxs.any():
                 break
+            elif idxs.shape[0] == 1:
+                break
+                # idxs = [idxs[0]-2, idxs[0]-1]
 
             offset = ys[idxs[0]] - ys[idxs[0] + 1]
-
             sidx, eidx = idxs[0] + 1, idxs[1] + 1
             sx, ex = x[sidx], x[eidx]
             fs.append((offset, sidx, eidx, sx, ex))

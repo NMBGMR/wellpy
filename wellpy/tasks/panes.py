@@ -47,9 +47,12 @@ class WellCentralPane(TraitsTaskPane):
 class ToolboxPane(TraitsDockPane):
     id = 'wellpy.toolbox.pane'
     name = 'Toolbox'
-    fix_data_button = Button('Fix Data')
+    fix_adj_head_data_button = Button('Remove Offsets/Zeros')
+    fix_depth_to_water_data_button = Button('Remove Offsets/Zeros')
+
     constant_offset = Float
-    threshold = Float(0.25)
+    adj_head_threshold = Float(0.25)
+    depth_to_water_threshold = Float(0.25)
 
     smooth_data_button = Button('Smooth')
     window = Int(11)
@@ -61,8 +64,12 @@ class ToolboxPane(TraitsDockPane):
     def _constant_offset_changed(self, new):
         self.model.apply_constant_offset(new)
 
-    def _fix_data_button_fired(self):
-        self.model.fix_data(self.threshold)
+    def _fix_adj_head_data_button_fired(self):
+        self.model.fix_adj_head_data(self.adj_head_threshold)
+
+
+    def _fix_depth_to_water_data_button_fired(self):
+        self.model.fix_depth_to_water_data(self.depth_to_water_threshold)
 
     def _smooth_data_button_fired(self):
         self.model.smooth_data(self.window, self.method)
@@ -73,16 +80,19 @@ class ToolboxPane(TraitsDockPane):
     def traits_view(self):
         manual_grp = VGroup(Item('pane.constant_offset', label='Constant Offset'),
                             show_border=True, label='Manual')
-        auto_grp = VGroup(Item('pane.threshold', label='Threshold'),
-                          UItem('pane.fix_data_button'),
-                          show_border=True, label='Auto')
+
+        auto_grp = VGroup(HGroup(Item('pane.adj_head_threshold', label='Threshold'),
+                          UItem('pane.fix_adj_head_data_button')),
+                          show_border=True, label='Adjusted Head')
         smooth_grp = VGroup(HGroup(UItem('pane.method'), Item('pane.window')),
                             UItem('pane.smooth_data_button'),
                             show_border=True,
                             label='Smooth')
 
-        calculate_grp = VGroup(Item('pane.correct_drift'),
-                               UItem('pane.calculate_button'),
+        calculate_grp = VGroup(HGroup(Item('pane.correct_drift'),
+                               UItem('pane.calculate_button')),
+                               HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
+                               UItem('pane.fix_depth_to_water_data_button')),
                                label='Depth To Water',
                                show_border=True)
         v = View(VGroup(
