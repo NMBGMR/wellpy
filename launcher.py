@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
-import logging
+from traits.etsconfig.api import ETSConfig
+ETSConfig.toolkit = "qt4"
 
+import logging
 from envisage.core_plugin import CorePlugin
 from envisage.ui.tasks.tasks_plugin import TasksPlugin
 
@@ -34,8 +36,7 @@ def launch():
     plugins = [CorePlugin(),
                DatabasePlugin(),
                WellpyPlugin(),
-               TasksPlugin(),
-               ]
+               TasksPlugin()]
 
     app = WellpyApplication(plugins=plugins)
 

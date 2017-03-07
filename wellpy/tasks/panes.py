@@ -60,13 +60,18 @@ class ToolboxPane(TraitsDockPane):
 
     calculate_button = Button('Calculate')
     correct_drift = Bool
+    drift_correction_direction = Enum('Forward','Reverse')
+    save_db_button = Button('Save DB')
+    qc_button = Button('Set QCed')
+
+    def _save_db_button_fired(self):
+        self.model.save_db()
 
     def _constant_offset_changed(self, new):
         self.model.apply_constant_offset(new)
 
     def _fix_adj_head_data_button_fired(self):
         self.model.fix_adj_head_data(self.adj_head_threshold)
-
 
     def _fix_depth_to_water_data_button_fired(self):
         self.model.fix_depth_to_water_data(self.depth_to_water_threshold)
@@ -90,9 +95,12 @@ class ToolboxPane(TraitsDockPane):
                             label='Smooth')
 
         calculate_grp = VGroup(HGroup(Item('pane.correct_drift'),
+                                      Item('pane.drift_correction_direction'),
                                UItem('pane.calculate_button')),
-                               HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
-                               UItem('pane.fix_depth_to_water_data_button')),
+                               UItem('pane.save_db_button'),
+                               # HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
+                               # UItem('pane.fix_depth_to_water_data_button')),
+
                                label='Depth To Water',
                                show_border=True)
         v = View(VGroup(

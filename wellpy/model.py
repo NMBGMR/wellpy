@@ -126,7 +126,21 @@ class WellpyModel(HasTraits):
         else:
             pids = self.db.get_point_ids()
             self.point_ids = pids
-        self.selected_point_id = self.point_ids[0]
+
+        if self.point_ids:
+            self.selected_point_id = self.point_ids[0]
+
+    def save_db(self):
+        model = self.data_model
+        x = model.x
+        depth_to_water = model.depth_to_water_y
+        ah = model.adjusted_water_head
+        h = model.water_head
+
+        for xi, hi, ahi, di in array(x, h, ah, depth_to_water).T:
+            xi = datetime.fromtimestamp(xi).isoformat()
+            record = (xi, hi, ahi, di)
+
 
     def retrieve_depth_to_water(self):
         """
@@ -136,6 +150,8 @@ class WellpyModel(HasTraits):
 
         pid = self.selected_point_id
         ms = self.db.get_depth_to_water(pid.name)
+        # for mi in ms:
+        #     print mi.
         # print ms
 
         # def factory(mm):
@@ -234,7 +250,11 @@ class WellpyModel(HasTraits):
         if ys.any():
             ys, zs, fs = self.data_model.fix_data(ys, threshold)
             plot = self._plots[DEPTH_TO_WATER]
-            plot.data.set_data(DEPTH_Y, ys)
+            plot_needed = 'sy' not in plot.data.arrays
+            plot.data.set_data('depth_y2', ys)
+            # plot.data.set_data(DEPTH_Y, ys)
+            if plot_needed:
+                plot.plot((DEPTH_X, 'depth_y2'), color='green')
 
         self.refresh_plot()
 
@@ -306,6 +326,18 @@ class WellpyModel(HasTraits):
             index_range = plot.index_range
             container.add(plot)
             self._plots[k] = plot
+
+        # plot = self._add_water_depth(padding)
+        # plot.index_range = index_range
+        # container.add(plot)
+        #
+        # plot = self._add_depth_to_water(padding)
+        # plot.index_range = index_range
+        # container.add(plot)
+        #
+        # plot = self._add_depth_to_sensor(padding)
+        # plot.index_range = index_range
+        # container.add(plot)
 
         self.refresh_plot()
 

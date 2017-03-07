@@ -81,6 +81,7 @@ class WaterDepthRecord(HasTraits):
         self.point_id = point_id
         # self.measurement_date = measurement_date
         self.level_status = level_status
+        print measurement_date, depth
         self.measurement = (time.mktime(measurement_date.timetuple()), depth)
 
 

@@ -13,7 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ===============================================================================
+import os
 
-DATABSE_DEBUG = False
-FILE_DEBUG = '/Users/ross/Sandbox/wellpydata/1_mg-030_danielson_wel_170118081630_D7259.csv'
+DATABSE_DEBUG = os.environ.get('DATABASE_DEBUG')
+FILE_DEBUG = os.environ.get('FILE_DEBUG')
+
 # ============= EOF =============================================

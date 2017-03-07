@@ -73,14 +73,14 @@ class DataModel:
             if not idxs.any():
                 break
             elif idxs.shape[0] == 1:
-                break
-                # idxs = [idxs[0]-2, idxs[0]-1]
+                idxs = [idxs[0], ys.shape[0]-1]
 
             offset = ys[idxs[0]] - ys[idxs[0] + 1]
-            sidx, eidx = idxs[0] + 1, idxs[1] + 1
+
+            sidx, eidx = idxs[0], idxs[1]
             sx, ex = x[sidx], x[eidx]
             fs.append((offset, sidx, eidx, sx, ex))
-            ys[idxs[0] + 1:idxs[1] + 1] += offset
+            ys[idxs[0]+1:idxs[1]+1] += offset
 
         return ys, zs, fs
 
