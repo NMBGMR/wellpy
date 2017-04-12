@@ -30,14 +30,11 @@ from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
 from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray
 
-from globals import DATABSE_DEBUG
-from wellpy.config import config
+from globals import DATABSE_DEBUG, FILE_DEBUG
 from wellpy.data_model import DataModel
 from wellpy.database_connector import DatabaseConnector, PointIDRecord
 from wellpy.fuzzyfinder import fuzzyfinder
-from wellpy.nm_well_database import NMWellDatabase
 from wellpy.range_overlay import RangeOverlay
-from wellpy.tools import DataTool, DataToolOverlay
 
 DEPTH_TO_WATER_TITLE = 'Water BGS'
 SENSOR_TITLE = 'Sensor BGS'
@@ -130,17 +127,26 @@ class WellpyModel(HasTraits):
         if self.point_ids:
             self.selected_point_id = self.point_ids[0]
 
+        if FILE_DEBUG:
+            self.path = FILE_DEBUG
+            self.load_file(FILE_DEBUG)
+
+            self.fix_adj_head_data(0.25)
+            self.calculate_depth_to_water()
+            self.save_db()
+
     def save_db(self):
         model = self.data_model
         x = model.x
         depth_to_water = model.depth_to_water_y
         ah = model.adjusted_water_head
         h = model.water_head
+        water_temp = model.water_temp
 
-        for xi, hi, ahi, di in array(x, h, ah, depth_to_water).T:
-            xi = datetime.fromtimestamp(xi).isoformat()
-            record = (xi, hi, ahi, di)
-
+        data = array((x, h, ah, depth_to_water, water_temp)).T
+        # rows = [(datetime.fromtimestamp(xi).strftime('%m/%d/%Y %I:%M:%S %p'), hi, ahi, di, ti) for xi, hi, ahi, di,
+        #                                                                                      ti in data]
+        self.db.insert_continuous_water_levels(self.selected_point_id.name, data)
 
     def retrieve_depth_to_water(self):
         """
@@ -231,7 +237,7 @@ class WellpyModel(HasTraits):
         :param threshold:
         :return:
         """
-        ys = self.data_model.water_head
+        ys = self.data_model.get_water_head()
         ys, zs, fs = self.data_model.fix_data(ys, threshold)
         self.auto_results = [AutoResult(*fi) for fi in fs]
 
@@ -241,6 +247,7 @@ class WellpyModel(HasTraits):
 
         # update adjusted head
         self.data_model.adjusted_water_head = ys
+
         plot = self._plots[ADJ_WATER_HEAD]
         plot.data.set_data('adjusted_water_head_y', ys)
         self.refresh_plot()

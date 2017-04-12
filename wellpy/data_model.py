@@ -39,6 +39,7 @@ class DataModel:
     water_depth_y = None
     depth_to_water_x = None
     depth_to_water_y = None
+    water_temp = None
 
     def __init__(self, path):
         self._path = path
@@ -86,7 +87,8 @@ class DataModel:
 
     # private
     def _load(self, p):
-        if p.endswith('.csv'):
+        pp = p.lower()
+        if pp.endswith('.csv'):
             self._load_csv(p)
         else:
             self._load_xls(p)
@@ -95,6 +97,7 @@ class DataModel:
         delimiter = ','
         x = []
         ws = []
+        ts = []
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
                 if not self.serial_number:
@@ -116,14 +119,19 @@ class DataModel:
                     water_head = float(water_head)
                 except TypeError:
                     continue
-
+                try:
+                    temp = float(temp)
+                except TypeError:
+                    continue
                 date = datetime.strptime(date, '%Y/%m/%d %H:%M:%S')
                 x.append(time.mktime(date.timetuple()))
                 ws.append(water_head)
+                ts.append(temp)
 
         self.x = array(x)
 
         # ws = array(ws)
+        self.water_temp = array(ts)
         self._water_head = ws
         self.water_head = array(ws)
         self.adjusted_water_head = array(ws)

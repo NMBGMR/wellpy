@@ -15,6 +15,11 @@
 # ===============================================================================
 import pymssql
 import time
+from StringIO import StringIO
+from pprint import pprint
+
+from datetime import datetime
+from lxml import etree
 
 from apptools.preferences.preference_binding import bind_preference
 from traits.api import HasTraits, Str, UUID, Float
@@ -72,6 +77,7 @@ class WaterDepthRecord(HasTraits):
     point_id = Str
     # measurement_date = None
     level_status = None
+
     # depth = Float
 
     def __init__(self, uuid, point_id, measurement_date, depth, level_status, *args, **kw):
@@ -111,9 +117,74 @@ class DatabaseConnector(HasTraits):
             cursor.execute('GetWaterLevelsPython %s', (point_id,))
             return [WaterDepthRecord(*r) for r in cursor.fetchall()]
 
+    def get_schema(self):
+        """
+       
+        :return: 
+        """
+        with self._get_cursor() as cursor:
+            cursor.execute('GetWLCPressureXSDSchema')
+            schematxt = cursor.fetchone()[0]
+
+            xmlschema_doc = etree.XML(bytes(schematxt))
+
+            print '-----------------'
+            print etree.tostring(xmlschema_doc, pretty_print=True)
+            print '-----------------'
+
+            schema = etree.XMLSchema(xmlschema_doc)
+            return schema
+
+    def insert_continuous_water_levels(self, pointid, rows):
+
+        schema = self.get_schema()
+
+        container = etree.Element('WaterLevelsContinuous_Pressure_Test')
+        TAGS = 'TemperatureWater', 'WaterHead', 'WaterHeadAdjusted', 'DepthToWaterBGS',
+        for x, a, ah, bgs, temp in rows[:5]:
+            elem = etree.Element('wlcp')
+
+            pid = etree.Element('PointID')
+            pid.text = pointid
+            elem.append(pid)
+
+            pid = etree.Element('DateMeasured')
+            # pid.text = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
+            pid.text = datetime.fromtimestamp(x).isoformat()
+            elem.append(pid)
+
+            for tag, v in zip(TAGS, (a, ah, bgs, temp)):
+                item = etree.Element(tag)
+                item.text = unicode(v)
+                elem.append(item)
+
+            # print etree.tostring(elem, pretty_print=True)
+            # schema.assertValid(elem)
+            # print 'ada',x, schema.validate(elem)
+            note = etree.Element('Notes')
+            note.text = 'testnote'
+            elem.append(note)
+            container.append(elem)
+
+        # xmldata.append(container)
+        #
+        # print(etree.tostring(cont, pretty_print=True, xml_declaration=True, standalone='yes'))
+        # print(etree.tostring(container, pretty_print=True, xml_declaration=True, standalone='yes'))
+        # schema.assertValid(cont)
+        # schema.assertValid(container)
+        if schema.validate(container):
+            with self._get_cursor() as cursor:
+                txt = etree.tostring(container, xml_declaration=True, standalone='yes', pretty_print=True)
+                cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
+                cursor.execute(cmd, args)
+                print cursor.fetchall()
+                r = self.get_continuous_water_levels(pointid)
+                print len(r)
+
     def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
         with self._get_cursor() as cursor:
-            cmd, args = 'GetWaterLevelsContinuousPython %s', (point_id,)
+            cmd, args = 'GetWLCPressurePython %s', (point_id,)
+            # cmd, args = 'GetWaterLevelsContinuousAcousticPython %s', (point_id,)
 
             if low or high or qced is not None:
                 args = (point_id, low, high, qced)
@@ -127,7 +198,7 @@ class DatabaseConnector(HasTraits):
 
 
 if __name__ == '__main__':
-    d = DatabaseConnector()
+    d = DatabaseConnector(bind=False)
     import os
 
     d._host = os.getenv('NM_AQUIFER_HOST')
@@ -136,7 +207,7 @@ if __name__ == '__main__':
     d._dbname = 'NM_Aquifer'
     # for pi in d.get_point_ids():
     #     print pi.name, len(d.get_depth_to_water(pi.name)), len(d.get_continuous_water_levels(pi.name))
-    name = 'TV-121'
+    name = 'MG-030'
     print d.get_point_ids()
 
     # print name, len(d.get_depth_to_water(name)), len(d.get_continuous_water_levels(name))
@@ -148,10 +219,12 @@ if __name__ == '__main__':
     print 'qced=None', len(r)
 
     r = d.get_continuous_water_levels(name, qced=1)
-    print 'qced=1',len(r)
+    print 'qced=1', len(r)
 
     r = d.get_continuous_water_levels(name, qced=0)
-    print 'qced=0',len(r)
+    print 'qced=0', len(r)
+
+    d.get_schema()
 
     # r = d.get_continuous_water_levels(name, low='2014-01-01T00:00:00.000',
     #                                        high='2016-01-01T00:00:00.000',
