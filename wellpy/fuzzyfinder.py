@@ -24,13 +24,17 @@ http://blog.amjith.com/fuzzyfinder-in-10-lines-of-python
 
 
 def func(regex, item, attr):
-    txt = item
+    txt = (item,)
     if attr:
-        txt = getattr(item, attr)
+        if not isinstance(attr, (list, tuple)):
+            attr = (attr, )
 
-    match = regex.search(str(txt))
-    if match:
-        return len(match.group()), match.start(), item
+        txt = (getattr(item, ai) for ai in attr)
+
+    for ti in txt:
+        match = regex.search(str(ti))
+        if match:
+            return len(match.group()), match.start(), item
 
 
 def fuzzyfinder(user_input, collection, attr=None):

@@ -356,7 +356,6 @@ class WellpyModel(HasTraits):
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
 
         plot.plot((DEPTH_X, DEPTH_Y))[0]
-        # self._plots[WATER_LEVEL] = plot
         return plot
 
     def _add_depth_to_sensor(self, padding):
@@ -368,11 +367,9 @@ class WellpyModel(HasTraits):
 
         plot.plot((DEPTH_SENSOR_X, DEPTH_SENSOR_Y))[0]
 
-        # self._plots[DEPTH_TO_SENSOR] = plot
         return plot
 
     def _add_water_head(self, padding):
-        # plot, line, scatter = self._add_line_scatter('water_head', 'Water Head', padding)
 
         data = self.data_model
         pd = self._plot_data((WATER_HEAD_X, data.x),
@@ -413,53 +410,13 @@ class WellpyModel(HasTraits):
 
         plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
         plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y))[0]
-        # self._plots[DEPTH_TO_WATER] = plot
         return plot
 
     def _plot_data(self, x, y):
         pd = ArrayPlotData()
-        # setattr(pd, x[0], x[1])
-        # setattr(pd, y[0], y[1])
-        # print x[0], getattr(pd, x[0])
-        # print y[0], getattr(pd, y[0])
         pd.set_data(x[0], x[1])
         pd.set_data(y[0], y[1])
         return pd
-
-    # def _add_line_scatter(self, key, title, padding, x=None):
-    #     data = self.data_model
-    #     pd = ArrayPlotData()
-    #     xkey, ykey = 'x', 'y'
-    #     if key:
-    #         ykey = key
-    #         # xkey = '{}_x'.format(key)
-    #         # ykey = '{}_y'.format(key)
-    #         # if x is None:
-    #         # else:
-    #         #     setattr(pd, xkey, getattr(data, xkey))
-    #         pd.x = data.x
-    #         setattr(pd, ykey, getattr(data, ykey))
-    #
-    #     plot = Plot(data=pd, padding=padding)
-    #     plot.y_axis.title = title
-    #     print xkey, xkey
-    #
-    #     line = plot.plot((xkey, ykey))[0]
-    #     scatter = plot.plot((xkey, ykey), marker_size=1.5, type='scatter')
-    #
-    #     dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
-    #     dto = DataToolOverlay(component=line, tool=dt)
-    #     line.tools.append(dt)
-    #     line.overlays.append(dto)
-    #
-    #     zoom = ZoomTool(plot,
-    #                     # tool_mode="range",
-    #                     axis='index',
-    #                     color=(0, 1, 0, 0.5),
-    #                     enable_wheel=False,
-    #                     always_on=False)
-    #     plot.overlays.append(zoom)
-    #     return plot, line, scatter
 
     def _plot_container_default(self):
         pc = VPlotContainer()
@@ -467,85 +424,42 @@ class WellpyModel(HasTraits):
 
     # property get/set
     def _get_filtered_point_ids(self):
-
-        return fuzzyfinder(self.point_id_entry, self.point_ids, 'name')
-        # return [p for p in self.point_ids if p.name.startswith(self.point_id_entry)]
+        return fuzzyfinder(self.point_id_entry, self.point_ids, ('name', 'serial_num'))
 
     def _get_filename(self):
         return os.path.basename(self.path)
-        # ============= EOF =============================================
-        # def apply_constant_offset(self, v):
-        #     self.fix_data()
-        #
-        #     if self._apply_constant_offset(v):
-        #         self.plot_container.invalidate_and_redraw()
-        #         self._plots[ADJ_WATER_HEAD].data.set_data(ADJ_WATER_HEAD, self.data_model.adjusted_water_head)
-        #         self._tool.deselect()
-        #     # self._series[0].index.metadata['selection_masks'] = None
-        # def set_value_selection(self, v):
-        #     if v is None:
-        #         v = array([])
-
-        # for s in self._series:
-        #     s.index.metadata['selections'] = v
-
-        # def has_selection(self):
-        #     if isinstance(self._tool.selection, tuple):
-        #         return bool(self._tool.selection)
-        #     else:
-        #         return self._tool.selection.any()
-        #         # return self._tool.selection and self._tool.selection.any()
-        #
-        # private
-        # def _apply_constant_offset(self, v):
-        #     try:
-        #         mask = self._series[0].index.metadata['selection_masks'][0]
-        #         self.data_model.apply_offset(ADJ_WATER_HEAD, v, mask)
-        #         return True
-        #     except KeyError:
-        #         pass
-        #
-        # def _apply_linear_interpolation(self):
-        #
-        #     mask = self._series[0].index.metadata['selection_masks'][0]
-        #     s,e = self._series[0].index.metadata['selections']
-        #
-        #     self.data_model.apply_linear(ADJ_WATER_HEAD, s, e, mask)
-        #
-        # def _gather_db_record(self):
-        #     raise NotImplementedError
-        #
-        # def _add_range_selection(self, series, listeners=None):
-        #     series.active_tool = tool = RangeSelection(series, left_button_selects=True)
-        #     if listeners:
-        #         tool.listeners = listeners
-        #
-        #     series.overlays.append(RangeSelectionOverlay(component=series))
-        #     return tool
-
-        # def import_db(self):
-        #     db = NMWellDatabase()
-        #     if db.connect(config.db_host,
-        #                   config.db_user,
-        #                   config.db_password,
-        #                   config.db_name,
-        #                   config.db_login_timeout):
-        #
-        #         # do database import here
-        #         record = self._gather_db_record()
-        #         db.add_record(record)
-        #
-        #         return True, db.url
-        #     else:
-        #         return False, db.url
-        #
-        # def apply_offset(self, kind, v):
-        #     if kind.lower() == 'constant':
-        #         self._apply_constant_offset(v)
-        #     else:
-        #         self._apply_linear_interpolation()
-        #
-        #     self.plot_container.invalidate_and_redraw()
-        #     self._plots[ADJ_WATER_HEAD].data.set_data(ADJ_WATER_HEAD, self.data_model.adjusted_water_head)
-        #     self._tool.deselect()
-        #     self._series[0].index.metadata['selection_masks'] = None
+# ============= EOF =============================================
+# def _add_line_scatter(self, key, title, padding, x=None):
+#     data = self.data_model
+#     pd = ArrayPlotData()
+#     xkey, ykey = 'x', 'y'
+#     if key:
+#         ykey = key
+#         # xkey = '{}_x'.format(key)
+#         # ykey = '{}_y'.format(key)
+#         # if x is None:
+#         # else:
+#         #     setattr(pd, xkey, getattr(data, xkey))
+#         pd.x = data.x
+#         setattr(pd, ykey, getattr(data, ykey))
+#
+#     plot = Plot(data=pd, padding=padding)
+#     plot.y_axis.title = title
+#     print xkey, xkey
+#
+#     line = plot.plot((xkey, ykey))[0]
+#     scatter = plot.plot((xkey, ykey), marker_size=1.5, type='scatter')
+#
+#     dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
+#     dto = DataToolOverlay(component=line, tool=dt)
+#     line.tools.append(dt)
+#     line.overlays.append(dto)
+#
+#     zoom = ZoomTool(plot,
+#                     # tool_mode="range",
+#                     axis='index',
+#                     color=(0, 1, 0, 0.5),
+#                     enable_wheel=False,
+#                     always_on=False)
+#     plot.overlays.append(zoom)
+#     return plot, line, scatter

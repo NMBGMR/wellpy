@@ -142,15 +142,15 @@ class DatabaseConnector(HasTraits):
         container = etree.Element('WaterLevelsContinuous_Pressure_Test')
         TAGS = 'TemperatureWater', 'WaterHead', 'WaterHeadAdjusted', 'DepthToWaterBGS',
         for x, a, ah, bgs, temp in rows[:5]:
-            elem = etree.Element('wlcp')
+            elem = etree.Element('row')
 
             pid = etree.Element('PointID')
             pid.text = pointid
             elem.append(pid)
 
             pid = etree.Element('DateMeasured')
-            # pid.text = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
-            pid.text = datetime.fromtimestamp(x).isoformat()
+            pid.text = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
+            # pid.text = datetime.fromtimestamp(x).isoformat()
             elem.append(pid)
 
             for tag, v in zip(TAGS, (a, ah, bgs, temp)):
@@ -172,14 +172,27 @@ class DatabaseConnector(HasTraits):
         # print(etree.tostring(container, pretty_print=True, xml_declaration=True, standalone='yes'))
         # schema.assertValid(cont)
         # schema.assertValid(container)
-        if schema.validate(container):
-            with self._get_cursor() as cursor:
-                txt = etree.tostring(container, xml_declaration=True, standalone='yes', pretty_print=True)
-                cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
-                cursor.execute(cmd, args)
-                print cursor.fetchall()
-                r = self.get_continuous_water_levels(pointid)
-                print len(r)
+        # if schema.validate(container):
+
+        with self._get_cursor() as cursor:
+
+            txt = etree.tostring(container,
+                                 # encoding='UTF-16',
+                                 xml_declaration=True,
+                                 standalone='yes',
+                                 # pretty_print=True
+                                 )
+            # print txt
+            # cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
+            # cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
+            cmd, args = 'InsertWLCPressureXMLPython_NEW_wUpdate %s', (txt,)
+            cursor.execute(cmd, args)
+            print cursor.fetchall()
+
+        results = self.get_continuous_water_levels(pointid)
+        print 'asdfasdfasdf', len(results)
+        # else:
+        #     print 'failed to valid'
 
     def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
         with self._get_cursor() as cursor:
