@@ -62,10 +62,17 @@ class ToolboxPane(TraitsDockPane):
     correct_drift = Bool
     drift_correction_direction = Enum('Forward', 'Reverse')
     save_db_button = Button('Save DB')
+    save_csv_button = Button('Save CSV')
     qc_button = Button('Set QCed')
 
     def _save_db_button_fired(self):
         self.model.save_db()
+
+    def _save_csv_button_fired(self):
+        dlg = FileDialog(action='save as', default_directory=os.path.expanduser('~'))
+
+        if dlg.open() == OK:
+            self.model.save_csv(dlg.path)
 
     def _constant_offset_changed(self, new):
         self.model.apply_constant_offset(new)
@@ -97,7 +104,9 @@ class ToolboxPane(TraitsDockPane):
         calculate_grp = VGroup(HGroup(Item('pane.correct_drift'),
                                       Item('pane.drift_correction_direction'),
                                       UItem('pane.calculate_button')),
-                               UItem('pane.save_db_button'),
+                               HGroup(UItem('pane.save_db_button'),
+                                       UItem('pane.save_csv_button')),
+
                                # HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
                                # UItem('pane.fix_depth_to_water_data_button')),
 

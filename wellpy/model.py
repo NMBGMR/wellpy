@@ -28,7 +28,7 @@ from pyface.message_dialog import information, warning
 from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
-from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray
+from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt
 
 from globals import DATABSE_DEBUG, FILE_DEBUG
 from wellpy.data_model import DataModel
@@ -36,7 +36,7 @@ from wellpy.database_connector import DatabaseConnector, PointIDRecord
 from wellpy.fuzzyfinder import fuzzyfinder
 from wellpy.range_overlay import RangeOverlay
 
-DEPTH_TO_WATER_TITLE = 'Water BGS'
+DEPTH_TO_WATER_TITLE = 'Depth To Water'
 SENSOR_TITLE = 'Sensor BGS'
 HEAD_TITLE = 'Head'
 ADJUSTED_HEAD_TITLE = 'Adjusted Head'
@@ -129,13 +129,30 @@ class WellpyModel(HasTraits):
 
         if FILE_DEBUG:
             self.path = FILE_DEBUG
-            self.load_file(FILE_DEBUG)
+            if self.load_file(FILE_DEBUG):
 
-            self.fix_adj_head_data(0.25)
-            self.calculate_depth_to_water()
-            self.save_db()
+                self.fix_adj_head_data(0.25)
+                self.calculate_depth_to_water()
+                self.save_db()
+
+    def save_csv(self, p, delimiter=','):
+        keys, data = self._gather_data(use_isoformat=True)
+        header = ','.join(keys)
+        if not p.endswith('.csv'):
+            p = '{}.csv'.format(p)
+
+        with open(p, 'w') as wfile:
+            wfile.write('{}\n'.format(header))
+            for row in data:
+                row = delimiter.join(map(str, row))
+                wfile.write('{}\n'.format(row))
+        information('CSV file saved to "{}"'.format(p))
 
     def save_db(self):
+        keys, data = self._gather_data()
+        self.db.insert_continuous_water_levels(self.selected_point_id.name, data)
+
+    def _gather_data(self, use_isoformat=False):
         model = self.data_model
         x = model.x
         depth_to_water = model.depth_to_water_y
@@ -143,10 +160,11 @@ class WellpyModel(HasTraits):
         h = model.water_head
         water_temp = model.water_temp
 
+        if use_isoformat:
+            x = [datetime.fromtimestamp(xi).isoformat() for xi in x]
+
         data = array((x, h, ah, depth_to_water, water_temp)).T
-        # rows = [(datetime.fromtimestamp(xi).strftime('%m/%d/%Y %I:%M:%S %p'), hi, ahi, di, ti) for xi, hi, ahi, di,
-        #                                                                                      ti in data]
-        self.db.insert_continuous_water_levels(self.selected_point_id.name, data)
+        return ('time','head','adjusted_head', 'depth_to_water', 'water_temp'), data
 
     def retrieve_depth_to_water(self):
         """
@@ -288,7 +306,12 @@ class WellpyModel(HasTraits):
         :param p:
         :return:
         """
-        data = DataModel(p)
+        try:
+            data = DataModel(p)
+        except ValueError, e:
+            warning(None, '{}, is not a valid file.\n Exception={}'.format(p, e))
+            return
+
         self.data_model = data
         self.initialize_plot()
 
@@ -303,7 +326,7 @@ class WellpyModel(HasTraits):
                 self.scroll_to_row = self.point_ids.index(self.selected_point_id)
 
                 self.retrieve_depth_to_water()
-
+                return True
             else:
                 information(None, 'Serial number="{}"  not in database'.format(serial_num))
 
@@ -352,9 +375,8 @@ class WellpyModel(HasTraits):
         pd = self._plot_data((DEPTH_X, []),
                              (DEPTH_Y, []))
 
-        plot = Plot(data=pd, padding=padding)
+        plot = Plot(data=pd, padding=padding, origin='top right')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
-
         plot.plot((DEPTH_X, DEPTH_Y))[0]
         return plot
 
@@ -362,7 +384,7 @@ class WellpyModel(HasTraits):
         pd = self._plot_data((DEPTH_SENSOR_X, []),
                              (DEPTH_SENSOR_Y, []))
 
-        plot = Plot(data=pd, padding=padding)
+        plot = Plot(data=pd, padding=padding, origin='top right')
         plot.y_axis.title = SENSOR_TITLE
 
         plot.plot((DEPTH_SENSOR_X, DEPTH_SENSOR_Y))[0]
@@ -406,7 +428,7 @@ class WellpyModel(HasTraits):
         # plot, line, scatter = self._add_line_scatter('', 'Manual BGS', padding, x=x)
         pd = self._plot_data((WATER_DEPTH_X, x),
                              (WATER_DEPTH_Y, y))
-        plot = Plot(data=pd, padding=padding)
+        plot = Plot(data=pd, padding=padding, origin='top right')
 
         plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
         plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y))[0]

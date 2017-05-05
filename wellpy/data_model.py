@@ -98,6 +98,14 @@ class DataModel:
         x = []
         ws = []
         ts = []
+        fmts = ('%Y/%m/%d %H:%M:%S',
+                '%Y/%m/%d %H:%M',
+                '%m/%d/%Y %H:%M:%S',
+                '%m/%d/%Y %H:%M',
+
+                '%m/%d/%y %H:%M:%S',
+                '%m/%d/%y %H:%M')
+        cfmt = None
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
                 if not self.serial_number:
@@ -105,12 +113,6 @@ class DataModel:
                     line = line.split(delimiter)
                     if line[0].startswith('Serial number'):
                         self.serial_number = line[0].split('=')[1].strip()
-                        print self.serial_number
-                        #line = line.split(',')[0]
-                        #s = line.strip().split('=')[-1]
-                        #print 'sline', line
-                        #self.serial_number = s.split(' ')[0][5:]
-
                 if i < 53:
                     continue
                 line = line.strip()
@@ -129,7 +131,22 @@ class DataModel:
                     temp = float(temp)
                 except TypeError:
                     continue
-                date = datetime.strptime(date, '%Y/%m/%d %H:%M:%S')
+
+                if not cfmt:
+                    for fmt in fmts:
+                        try:
+                            date = datetime.strptime(date, fmt)
+                            cfmt = fmt
+                            break
+                        except ValueError, e:
+                            continue
+
+                    else:
+                        raise ValueError('Invalid date format "{}"'
+                                         'Did not match any of the following\n{}'.format(date, '\n'.join(fmts)))
+                else:
+                    date = datetime.strptime(date, cfmt)
+
                 x.append(time.mktime(date.timetuple()))
                 ws.append(water_head)
                 ts.append(temp)

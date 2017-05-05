@@ -87,7 +87,6 @@ class WaterDepthRecord(HasTraits):
         self.point_id = point_id
         # self.measurement_date = measurement_date
         self.level_status = level_status
-        print measurement_date, depth
         self.measurement = (time.mktime(measurement_date.timetuple()), depth)
 
 
@@ -137,7 +136,7 @@ class DatabaseConnector(HasTraits):
 
     def insert_continuous_water_levels(self, pointid, rows):
 
-        schema = self.get_schema()
+        # schema = self.get_schema()
 
         container = etree.Element('WaterLevelsContinuous_Pressure_Test')
         TAGS = 'TemperatureWater', 'WaterHead', 'WaterHeadAdjusted', 'DepthToWaterBGS',
@@ -183,6 +182,7 @@ class DatabaseConnector(HasTraits):
                                  # pretty_print=True
                                  )
             # print txt
+
             # cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
             # cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
             cmd, args = 'InsertWLCPressureXMLPython_NEW_wUpdate %s', (txt,)
