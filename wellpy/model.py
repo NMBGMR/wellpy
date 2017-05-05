@@ -375,7 +375,7 @@ class WellpyModel(HasTraits):
         pd = self._plot_data((DEPTH_X, []),
                              (DEPTH_Y, []))
 
-        plot = Plot(data=pd, padding=padding, origin='top right')
+        plot = Plot(data=pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
         plot.plot((DEPTH_X, DEPTH_Y))[0]
         return plot
@@ -384,7 +384,7 @@ class WellpyModel(HasTraits):
         pd = self._plot_data((DEPTH_SENSOR_X, []),
                              (DEPTH_SENSOR_Y, []))
 
-        plot = Plot(data=pd, padding=padding, origin='top right')
+        plot = Plot(data=pd, padding=padding, origin='top left')
         plot.y_axis.title = SENSOR_TITLE
 
         plot.plot((DEPTH_SENSOR_X, DEPTH_SENSOR_Y))[0]
@@ -428,7 +428,7 @@ class WellpyModel(HasTraits):
         # plot, line, scatter = self._add_line_scatter('', 'Manual BGS', padding, x=x)
         pd = self._plot_data((WATER_DEPTH_X, x),
                              (WATER_DEPTH_Y, y))
-        plot = Plot(data=pd, padding=padding, origin='top right')
+        plot = Plot(data=pd, padding=padding, origin='top left')
 
         plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
         plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y))[0]
