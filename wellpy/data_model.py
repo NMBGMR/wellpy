@@ -101,9 +101,15 @@ class DataModel:
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
                 if not self.serial_number:
-                    if line.strip().startswith('Serial number'):
-                        s = line.strip().split('=')[-1]
-                        self.serial_number = s.split(' ')[0][5:]
+                    line = line.strip()
+                    line = line.split(delimiter)
+                    if line[0].startswith('Serial number'):
+                        self.serial_number = line[0].split('=')[1].strip()
+                        print self.serial_number
+                        #line = line.split(',')[0]
+                        #s = line.strip().split('=')[-1]
+                        #print 'sline', line
+                        #self.serial_number = s.split(' ')[0][5:]
 
                 if i < 53:
                     continue
@@ -117,7 +123,7 @@ class DataModel:
 
                 try:
                     water_head = float(water_head)
-                except TypeError:
+                except (ValueError, TypeError):
                     continue
                 try:
                     temp = float(temp)

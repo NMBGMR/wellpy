@@ -305,7 +305,7 @@ class WellpyModel(HasTraits):
                 self.retrieve_depth_to_water()
 
             else:
-                information(None, 'Serial number="{}"  not in database')
+                information(None, 'Serial number="{}"  not in database'.format(serial_num))
 
     def initialize_plot(self):
         container = self.plot_container
