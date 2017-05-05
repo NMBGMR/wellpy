@@ -148,7 +148,7 @@ class WellpyModel(HasTraits):
                 for row in data:
                     row = delimiter.join(map(str, row))
                     wfile.write('{}\n'.format(row))
-            information('CSV file saved to "{}"'.format(p))
+            information(None, 'CSV file saved to "{}"'.format(p))
 
     def save_db(self):
         keys, data = self._gather_data()
