@@ -130,23 +130,25 @@ class WellpyModel(HasTraits):
         if FILE_DEBUG:
             self.path = FILE_DEBUG
             if self.load_file(FILE_DEBUG):
-
                 self.fix_adj_head_data(0.25)
                 self.calculate_depth_to_water()
                 self.save_db()
 
     def save_csv(self, p, delimiter=','):
-        keys, data = self._gather_data(use_isoformat=True)
-        header = ','.join(keys)
-        if not p.endswith('.csv'):
-            p = '{}.csv'.format(p)
+        if self.selected_point_id:
+            keys, data = self._gather_data(use_isoformat=True)
+            header = ','.join(keys)
+            if not p.endswith('.csv'):
+                p = '{}.csv'.format(p)
 
-        with open(p, 'w') as wfile:
-            wfile.write('{}\n'.format(header))
-            for row in data:
-                row = delimiter.join(map(str, row))
-                wfile.write('{}\n'.format(row))
-        information('CSV file saved to "{}"'.format(p))
+            with open(p, 'w') as wfile:
+                wfile.write('{}\n'.format(delimiter.join(('SerialNumber', self.selected_point_id.serial_num))))
+                wfile.write('{}\n'.format(delimiter.join(('PointID', self.selected_point_id.name))))
+                wfile.write('{}\n'.format(header))
+                for row in data:
+                    row = delimiter.join(map(str, row))
+                    wfile.write('{}\n'.format(row))
+            information('CSV file saved to "{}"'.format(p))
 
     def save_db(self):
         keys, data = self._gather_data()
@@ -164,7 +166,7 @@ class WellpyModel(HasTraits):
             x = [datetime.fromtimestamp(xi).isoformat() for xi in x]
 
         data = array((x, h, ah, depth_to_water, water_temp)).T
-        return ('time','head','adjusted_head', 'depth_to_water', 'water_temp'), data
+        return ('time', 'head', 'adjusted_head', 'depth_to_water', 'water_temp'), data
 
     def retrieve_depth_to_water(self):
         """
@@ -450,38 +452,38 @@ class WellpyModel(HasTraits):
 
     def _get_filename(self):
         return os.path.basename(self.path)
-# ============= EOF =============================================
-# def _add_line_scatter(self, key, title, padding, x=None):
-#     data = self.data_model
-#     pd = ArrayPlotData()
-#     xkey, ykey = 'x', 'y'
-#     if key:
-#         ykey = key
-#         # xkey = '{}_x'.format(key)
-#         # ykey = '{}_y'.format(key)
-#         # if x is None:
-#         # else:
-#         #     setattr(pd, xkey, getattr(data, xkey))
-#         pd.x = data.x
-#         setattr(pd, ykey, getattr(data, ykey))
-#
-#     plot = Plot(data=pd, padding=padding)
-#     plot.y_axis.title = title
-#     print xkey, xkey
-#
-#     line = plot.plot((xkey, ykey))[0]
-#     scatter = plot.plot((xkey, ykey), marker_size=1.5, type='scatter')
-#
-#     dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
-#     dto = DataToolOverlay(component=line, tool=dt)
-#     line.tools.append(dt)
-#     line.overlays.append(dto)
-#
-#     zoom = ZoomTool(plot,
-#                     # tool_mode="range",
-#                     axis='index',
-#                     color=(0, 1, 0, 0.5),
-#                     enable_wheel=False,
-#                     always_on=False)
-#     plot.overlays.append(zoom)
-#     return plot, line, scatter
+        # ============= EOF =============================================
+        # def _add_line_scatter(self, key, title, padding, x=None):
+        #     data = self.data_model
+        #     pd = ArrayPlotData()
+        #     xkey, ykey = 'x', 'y'
+        #     if key:
+        #         ykey = key
+        #         # xkey = '{}_x'.format(key)
+        #         # ykey = '{}_y'.format(key)
+        #         # if x is None:
+        #         # else:
+        #         #     setattr(pd, xkey, getattr(data, xkey))
+        #         pd.x = data.x
+        #         setattr(pd, ykey, getattr(data, ykey))
+        #
+        #     plot = Plot(data=pd, padding=padding)
+        #     plot.y_axis.title = title
+        #     print xkey, xkey
+        #
+        #     line = plot.plot((xkey, ykey))[0]
+        #     scatter = plot.plot((xkey, ykey), marker_size=1.5, type='scatter')
+        #
+        #     dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
+        #     dto = DataToolOverlay(component=line, tool=dt)
+        #     line.tools.append(dt)
+        #     line.overlays.append(dto)
+        #
+        #     zoom = ZoomTool(plot,
+        #                     # tool_mode="range",
+        #                     axis='index',
+        #                     color=(0, 1, 0, 0.5),
+        #                     enable_wheel=False,
+        #                     always_on=False)
+        #     plot.overlays.append(zoom)
+        #     return plot, line, scatter
