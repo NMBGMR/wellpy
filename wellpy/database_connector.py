@@ -47,8 +47,8 @@ class MockCursor:
 class SessionCTX:
     def __init__(self, h, u, p, n, *args, **kw):
         try:
-            conn = pymssql.connect(h, u, p, n, *args, **kw)
-        except pymssql.InterfaceError:
+            conn = pymssql.connect(h, u, p, n, login_timeout=5, *args, **kw)
+        except (pymssql.InterfaceError, pymssql.OperationalError):
             conn = MockConnection()
             pass
 
@@ -135,6 +135,33 @@ class DatabaseConnector(HasTraits):
             return schema
 
     def insert_continuous_water_levels(self, pointid, rows):
+        """
+        InsertWLCPressurePython
+        @PointID nvarchar(50),
+        @DateMeasured datetime,
+        @TemperatureWater real,
+        @WaterHead real,
+        @WaterHeadAdjusted real,
+        @DepthToWaterBGS real,
+        @notes nvarchar(100)
+
+        :param pointid:
+        :param rows:
+        :return:
+        """
+
+        with self._get_cursor() as cursor:
+            cmd = 'InsertWLCPressurePython %s'
+            note = 'testnote'
+            for x, a, ah, bgs, temp in rows:
+                datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
+                args = (pointid, datemeasured, temp, a, ah, bgs, note)
+                cursor.execute(cmd, args)
+
+        results = self.get_continuous_water_levels(pointid)
+        print 'asdfasdfasdf', len(results)
+
+    def insert_continuous_water_levels_xml(self, pointid, rows):
 
         # schema = self.get_schema()
 
@@ -152,7 +179,7 @@ class DatabaseConnector(HasTraits):
             # pid.text = datetime.fromtimestamp(x).isoformat()
             elem.append(pid)
 
-            for tag, v in zip(TAGS, (a, ah, bgs, temp)):
+            for tag, v in zip(TAGS, (temp, a, ah, bgs)):
                 item = etree.Element(tag)
                 item.text = unicode(v)
                 elem.append(item)
