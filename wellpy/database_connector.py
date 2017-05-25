@@ -24,7 +24,25 @@ from lxml import etree
 from apptools.preferences.preference_binding import bind_preference
 from traits.api import HasTraits, Str, UUID, Float
 
-
+testtxt = '''
+<?xml version="1.0" encoding="utf-16" standalone="yes"?>
+<WaterLevelsContinuous_Pressure_Test>
+<row><PointID>TV-121</PointID><DateMeasured>2014-02-07T12:00:00</DateMeasured><TemperatureWater>12.54</TemperatureWater><WaterHead>6.53295</WaterHead><WaterHeadAdjusted>6.53295</WaterHeadAdjusted><DepthToWaterBGS>119.957</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:2/7/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-01-25T12:00:00</DateMeasured><TemperatureWater>12.54</TemperatureWater><WaterHead>6.33938</WaterHead><WaterHeadAdjusted>6.33938</WaterHeadAdjusted><DepthToWaterBGS>120.1506</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:1/25/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-03-04T12:00:00</DateMeasured><TemperatureWater>12.527</TemperatureWater><WaterHead>6.49905</WaterHead><WaterHeadAdjusted>6.49905</WaterHeadAdjusted><DepthToWaterBGS>119.991</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:3/4/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-12-17T12:00:00</DateMeasured><TemperatureWater>12.547</TemperatureWater><WaterHead>6.35004</WaterHead><WaterHeadAdjusted>6.35004</WaterHeadAdjusted><DepthToWaterBGS>120.14</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:12/17/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-08-08T12:00:00</DateMeasured><TemperatureWater>12.54</TemperatureWater><WaterHead>6.22783</WaterHead><WaterHeadAdjusted>6.22783</WaterHeadAdjusted><DepthToWaterBGS>120.2622</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:8/8/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-11-22T12:00:00</DateMeasured><TemperatureWater>12.54</TemperatureWater><WaterHead>6.26911</WaterHead><WaterHeadAdjusted>6.26911</WaterHeadAdjusted><DepthToWaterBGS>120.2209</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:11/22/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-12-01T12:00:00</DateMeasured><TemperatureWater>12.54</TemperatureWater><WaterHead>6.15128</WaterHead><WaterHeadAdjusted>6.15128</WaterHeadAdjusted><DepthToWaterBGS>120.3387</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:12/1/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-11-18T00:00:00</DateMeasured><TemperatureWater>12.54</TemperatureWater><WaterHead>6.13788</WaterHead><WaterHeadAdjusted>6.13788</WaterHeadAdjusted><DepthToWaterBGS>120.3521</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:11/18/2014 12:00:00 AM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-04-04T12:00:00</DateMeasured><TemperatureWater>12.547</TemperatureWater><WaterHead>6.35496</WaterHead><WaterHeadAdjusted>6.35496</WaterHeadAdjusted><DepthToWaterBGS>120.135</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:4/4/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-09-18T12:00:00</DateMeasured><TemperatureWater>12.547</TemperatureWater><WaterHead>6.15866</WaterHead><WaterHeadAdjusted>6.15866</WaterHeadAdjusted><DepthToWaterBGS>120.3313</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:9/18/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-01-09T00:00:00</DateMeasured><TemperatureWater>12.54</TemperatureWater><WaterHead>6.54006</WaterHead><WaterHeadAdjusted>6.54006</WaterHeadAdjusted><DepthToWaterBGS>119.9499</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:1/9/2014 12:00:00 AM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-07-29T00:00:00</DateMeasured><TemperatureWater>12.533</TemperatureWater><WaterHead>6.1726</WaterHead><WaterHeadAdjusted>6.1726</WaterHeadAdjusted><DepthToWaterBGS>120.3174</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:7/29/2014 12:00:00 AM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-12-27T12:00:00</DateMeasured><TemperatureWater>12.56</TemperatureWater><WaterHead>6.27349</WaterHead><WaterHeadAdjusted>6.27349</WaterHeadAdjusted><DepthToWaterBGS>120.2165</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:12/27/2014 12:00:00 PM </Notes></row>
+<row><PointID>TV-121</PointID><DateMeasured>2014-09-06T00:00:00</DateMeasured><TemperatureWater>12.547</TemperatureWater><WaterHead>6.05887</WaterHead><WaterHeadAdjusted>6.05887</WaterHeadAdjusted><DepthToWaterBGS>120.4311</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:9/6/2014 12:00:00 AM </Notes></row>
+</WaterLevelsContinuous_Pressure_Test>
+'''
 class MockConnection:
     def cursor(self):
         return MockCursor()
@@ -47,7 +65,7 @@ class MockCursor:
 class SessionCTX:
     def __init__(self, h, u, p, n, *args, **kw):
         try:
-            conn = pymssql.connect(h, u, p, n, login_timeout=5, *args, **kw)
+            conn = pymssql.connect(h, u, p, n, timeout=3, login_timeout=5, *args, **kw)
         except (pymssql.InterfaceError, pymssql.OperationalError):
             conn = MockConnection()
             pass
@@ -58,6 +76,7 @@ class SessionCTX:
         return self._conn.cursor()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self._conn.commit()
         self._conn.close()
 
 
@@ -125,7 +144,7 @@ class DatabaseConnector(HasTraits):
             cursor.execute('GetWLCPressureXSDSchema')
             schematxt = cursor.fetchone()[0]
 
-            xmlschema_doc = etree.XML(bytes(schematxt))
+            xmlschema_doc = etree.XML(str(schematxt))
 
             print '-----------------'
             print etree.tostring(xmlschema_doc, pretty_print=True)
@@ -149,21 +168,20 @@ class DatabaseConnector(HasTraits):
         :param rows:
         :return:
         """
-
         with self._get_cursor() as cursor:
-            cmd = 'InsertWLCPressurePython %s'
+            cmd = 'InsertWLCPressurePython %s, %s, %d, %d, %d, %d, %s'
             note = 'testnote'
-            for x, a, ah, bgs, temp in rows:
+            for x, a, ah, bgs, temp in rows[:5]:
                 datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
                 args = (pointid, datemeasured, temp, a, ah, bgs, note)
                 cursor.execute(cmd, args)
 
-        results = self.get_continuous_water_levels(pointid)
-        print 'asdfasdfasdf', len(results)
+        # results = self.get_continuous_water_levels(pointid)
+        # print 'N records={} '.format(len(results))
 
     def insert_continuous_water_levels_xml(self, pointid, rows):
 
-        # schema = self.get_schema()
+        schema = self.get_schema()
 
         container = etree.Element('WaterLevelsContinuous_Pressure_Test')
         TAGS = 'TemperatureWater', 'WaterHead', 'WaterHeadAdjusted', 'DepthToWaterBGS',
@@ -175,8 +193,8 @@ class DatabaseConnector(HasTraits):
             elem.append(pid)
 
             pid = etree.Element('DateMeasured')
-            pid.text = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
-            # pid.text = datetime.fromtimestamp(x).isoformat()
+            # pid.text = datetime.fromtimestamp(x).strftime('%m/%d/%Y%I:%M:%S %p')
+            pid.text = datetime.fromtimestamp(x).isoformat()
             elem.append(pid)
 
             for tag, v in zip(TAGS, (temp, a, ah, bgs)):
@@ -192,26 +210,29 @@ class DatabaseConnector(HasTraits):
             elem.append(note)
             container.append(elem)
 
+        # container = etree.XML(testtxt)
+
         # xmldata.append(container)
         #
         # print(etree.tostring(cont, pretty_print=True, xml_declaration=True, standalone='yes'))
         # print(etree.tostring(container, pretty_print=True, xml_declaration=True, standalone='yes'))
         # schema.assertValid(cont)
-        # schema.assertValid(container)
+        schema.assertValid(container)
         # if schema.validate(container):
 
         with self._get_cursor() as cursor:
 
             txt = etree.tostring(container,
-                                 # encoding='UTF-16',
+                                 encoding='UTF-8',
                                  xml_declaration=True,
                                  standalone='yes',
-                                 # pretty_print=True
+                                 pretty_print=True
                                  )
-            # print txt
+            print txt
 
             # cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
-            # cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
+            # print testtxt
+            # cmd, args = 'InsertWLCPressurePython %s', (testtxt,)
             cmd, args = 'InsertWLCPressureXMLPython_NEW_wUpdate %s', (txt,)
             cursor.execute(cmd, args)
             print cursor.fetchall()
@@ -244,11 +265,12 @@ if __name__ == '__main__':
     d._host = os.getenv('NM_AQUIFER_HOST')
     d._user = os.getenv('NM_AQUIFER_USER')
     d._password = os.getenv('NM_AQUIFER_PASSWORD')
+    print d._host, d._user, d._password
     d._dbname = 'NM_Aquifer'
     # for pi in d.get_point_ids():
     #     print pi.name, len(d.get_depth_to_water(pi.name)), len(d.get_continuous_water_levels(pi.name))
     name = 'MG-030'
-    print d.get_point_ids()
+    # print d.get_point_ids()
 
     # print name, len(d.get_depth_to_water(name)), len(d.get_continuous_water_levels(name))
     # for p in d.get_continuous_water_levels(name, low='2016-01-01T00:00:00.000',
@@ -264,7 +286,7 @@ if __name__ == '__main__':
     r = d.get_continuous_water_levels(name, qced=0)
     print 'qced=0', len(r)
 
-    d.get_schema()
+    # d.get_schema()
 
     # r = d.get_continuous_water_levels(name, low='2014-01-01T00:00:00.000',
     #                                        high='2016-01-01T00:00:00.000',

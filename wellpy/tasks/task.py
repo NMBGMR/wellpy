@@ -19,7 +19,7 @@ from chaco.plot_containers import VPlotContainer
 from envisage.ui.tasks.action.preferences_action import PreferencesAction
 from pyface.tasks.action.schema import SMenu, SMenuBar, SGroup
 from pyface.tasks.action.task_action import TaskAction
-from pyface.tasks.task_layout import PaneItem, TaskLayout, VSplitter
+from pyface.tasks.task_layout import PaneItem, TaskLayout, VSplitter, Tabbed
 from traits.api import List, Str, HasTraits, Instance, Property, Button
 from pyface.tasks.task import Task
 from traitsui.menu import Action
@@ -28,7 +28,7 @@ from globals import DATABSE_DEBUG
 from wellpy.database_connector import DatabaseConnector
 from wellpy.model import WellpyModel
 from wellpy.tasks.actions import ResetLayoutAction
-from wellpy.tasks.panes import WellPane, WellCentralPane, ToolboxPane, AutoResultsPane
+from wellpy.tasks.panes import WellPane, WellCentralPane, ToolboxPane, AutoResultsPane, QCPane
 
 
 class WellpyTask(Task):
@@ -49,11 +49,13 @@ class WellpyTask(Task):
     def create_dock_panes(self):
         return [WellPane(model=self.model),
                 ToolboxPane(model=self.model),
-                AutoResultsPane(model=self.model)]
+                AutoResultsPane(model=self.model),
+                QCPane(model=self.model)]
 
     def _default_layout_default(self):
         return TaskLayout(left=VSplitter(PaneItem('wellpy.well.pane'),
-                                         PaneItem('wellpy.toolbox.pane')),
+                                         Tabbed(PaneItem('wellpy.toolbox.pane'),
+                                                PaneItem('wellpy.qc.pane'))),
                           bottom=PaneItem('wellpy.autoresults.pane'))
 
     def _menu_bar_factory(self, menus=None):

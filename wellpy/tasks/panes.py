@@ -137,6 +137,20 @@ class AutoResultsPane(TraitsDockPane):
         return v
 
 
+class QCPane(TraitsDockPane):
+    id = 'wellpy.qc.pane'
+    name = 'QC'
+
+    apply_qc_button = Button('Apply QC')
+
+    def _apply_qc_button_fired(self):
+        self.model.apply_qc()
+
+    def traits_view(self):
+        v = View(UItem('pane.apply_qc_button'))
+        return v
+
+
 class WellPane(TraitsDockPane):
     id = 'wellpy.well.pane'
     name = 'Well'
