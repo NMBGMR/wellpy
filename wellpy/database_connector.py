@@ -22,6 +22,7 @@ from datetime import datetime
 from lxml import etree
 
 from apptools.preferences.preference_binding import bind_preference
+from pyface.progress_dialog import ProgressDialog
 from traits.api import HasTraits, Str, UUID, Float
 
 testtxt = '''
@@ -168,17 +169,26 @@ class DatabaseConnector(HasTraits):
         :param rows:
         :return:
         """
+        existing_nresults = len(self.get_continuous_water_levels(pointid))
+
         with self._get_cursor() as cursor:
-            cmd = 'InsertWLCPressurePython %s, %s, %d, %d, %d, %d, %s'
+            cmd = 'InsertWLCPressurePython_NEW_wUpdate %s, %s, %d, %d, %d, %d, %s'
             note = 'testnote'
-            for x, a, ah, bgs, temp in rows[:5]:
+
+            pd = ProgressDialog(show_time=True, message='Insert')
+            pd.max =n = len(rows)
+            pd.open()
+            for i, (x, a, ah, bgs, temp) in enumerate(rows):
                 datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
                 args = (pointid, datemeasured, temp, a, ah, bgs, note)
                 cursor.execute(cmd, args)
+                pd.change_message('Insert row:  {}/{}'.format(i, n))
+                pd.update(i)
+            pd.close()
 
-        # results = self.get_continuous_water_levels(pointid)
-        # print 'N records={} '.format(len(results))
-
+        inserted_nresults = len(self.get_continuous_water_levels(pointid))
+        return existing_nresults, inserted_nresults
+    
     def insert_continuous_water_levels_xml(self, pointid, rows):
 
         schema = self.get_schema()

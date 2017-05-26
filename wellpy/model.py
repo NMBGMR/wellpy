@@ -24,6 +24,8 @@ from chaco.tools.range_selection import RangeSelection
 from chaco.tools.range_selection_overlay import RangeSelectionOverlay
 from datetime import datetime
 
+from pyface.confirmation_dialog import confirm
+from pyface.constant import YES
 from pyface.message_dialog import information, warning
 from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int
 from chaco.scales.api import CalendarScaleSystem
@@ -152,7 +154,10 @@ class WellpyModel(HasTraits):
 
     def save_db(self):
         keys, data = self._gather_data()
-        self.db.insert_continuous_water_levels(self.selected_point_id.name, data)
+        if YES == confirm(None, 'Are you sure you want to save to the database?'):
+            pid = self.selected_point_id.name
+            e, i = self.db.insert_continuous_water_levels(pid, data)
+            information(None, 'There were {} existing records for {}. {} records inserted'.format(e, pid, i - e))
 
     def _gather_data(self, use_isoformat=False):
         model = self.data_model
