@@ -159,13 +159,12 @@ class WellpyModel(HasTraits):
 
     def save_pdf(self):
 
-        gc = PdfPlotGraphicsContext()
-        self._save_depth_to_water(gc, self._plots[DEPTH_TO_WATER], '.pdf')
+        self._save_depth_to_water(self._plots[DEPTH_TO_WATER], '.pdf')
 
-    def _save_depth_to_water(self, gc, plot, ext, **render):
+    def _save_depth_to_water(self, plot, ext, **render):
         p = self._save_path(ext)
         if p:
-            gc.filename = p
+            gc = PdfPlotGraphicsContext(filename=p)
             for lines in plot.plots.itervalues():
                 for line in lines:
                     for o in line.overlays:
@@ -175,7 +174,7 @@ class WellpyModel(HasTraits):
 
             plot.invalidate_and_redraw()
             gc.render_component(plot, **render)
-            gc.save(p)
+            gc.save()
             for lines in plot.plots.itervalues():
                 for line in lines:
                     for o in line.overlays:
