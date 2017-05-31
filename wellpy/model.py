@@ -175,7 +175,7 @@ class WellpyModel(HasTraits):
 
             plot.invalidate_and_redraw()
             gc.render_component(plot, **render)
-            gc.save(p, file_format=ext)
+            gc.save(p)
             for lines in plot.plots.itervalues():
                 for line in lines:
                     for o in line.overlays:
