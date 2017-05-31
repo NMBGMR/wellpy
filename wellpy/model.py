@@ -14,8 +14,12 @@
 # limitations under the License.
 # ===============================================================================
 import os
+from plistlib import Data
+
 from chaco.axis import PlotAxis
+from chaco.pdf_graphics_context import PdfPlotGraphicsContext
 from chaco.plot_containers import VPlotContainer
+from chaco.plot_graphics_context import PlotGraphicsContext
 from chaco.tools.api import ZoomTool
 from chaco.array_plot_data import ArrayPlotData
 from chaco.plot import Plot
@@ -26,6 +30,7 @@ from datetime import datetime
 
 from pyface.confirmation_dialog import confirm
 from pyface.constant import YES
+from pyface.file_dialog import FileDialog
 from pyface.message_dialog import information, warning
 from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int
 from chaco.scales.api import CalendarScaleSystem
@@ -136,6 +141,46 @@ class WellpyModel(HasTraits):
                 self.fix_adj_head_data(0.25)
                 self.calculate_depth_to_water()
                 self.save_db()
+
+    def _save_path(self, ext):
+        dlg = FileDialog(action='save as')
+        if dlg.open():
+            p = dlg.path
+            if p:
+                if not p.endswith(ext):
+                    p = '{}{}'.format(p, ext)
+                return p
+
+    def save_png(self):
+        information(None, 'Save as png not enabled')
+        # plot = self._plots[DEPTH_TO_WATER]
+        # gc = PlotGraphicsContext((int(plot.outer_width), int(plot.outer_height)))
+        # self._save_depth_to_water(gc, plot, '.tiff')
+
+    def save_pdf(self):
+
+        gc = PdfPlotGraphicsContext()
+        self._save_depth_to_water(gc, self._plots[DEPTH_TO_WATER], '.pdf')
+
+    def _save_depth_to_water(self, gc, plot, ext, **render):
+        p = self._save_path(ext)
+        if p:
+            gc.filename = p
+            for lines in plot.plots.itervalues():
+                for line in lines:
+                    for o in line.overlays:
+                        if isinstance(o, DataToolOverlay):
+                            ovisible = o.visible
+                            o.visible = False
+
+            plot.invalidate_and_redraw()
+            gc.render_component(plot, **render)
+            gc.save(p, file_format=ext)
+            for lines in plot.plots.itervalues():
+                for line in lines:
+                    for o in line.overlays:
+                        if isinstance(o, DataToolOverlay):
+                            o.visible = ovisible
 
     def save_csv(self, p, delimiter=','):
         if self.selected_point_id:

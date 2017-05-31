@@ -82,7 +82,7 @@ class DataToolOverlay(TextBoxOverlay):
     border_visible = True
     bgcolor = 'orange'
     tool = Any
-    visibility = Enum("auto", True, False)
+    visibility = Enum(True, "auto", False)
     visible = False
     #    visible = True
     #    tooltip_mode = Bool(True)

@@ -65,6 +65,15 @@ class ToolboxPane(TraitsDockPane):
     save_csv_button = Button('Save CSV')
     qc_button = Button('Set QCed')
 
+    save_png_button = Button('Save PNG')
+    save_pdf_button = Button('Save PDF')
+
+    def _save_pdf_button_fired(self):
+        self.model.save_pdf()
+
+    def _save_png_button_fired(self):
+        self.model.save_png()
+
     def _save_db_button_fired(self):
         self.model.save_db()
 
@@ -105,7 +114,10 @@ class ToolboxPane(TraitsDockPane):
                                       Item('pane.drift_correction_direction'),
                                       UItem('pane.calculate_button')),
                                HGroup(UItem('pane.save_db_button'),
-                                       UItem('pane.save_csv_button')),
+                                       UItem('pane.save_csv_button'),
+                                       UItem('pane.save_pdf_button'),
+                                       # UItem('pane.save_png_button')
+                                      ),
 
                                # HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
                                # UItem('pane.fix_depth_to_water_data_button')),
