@@ -66,13 +66,14 @@ class DataTool(BaseTool):
                 # convert timestamp to str
                 try:
                     date = datetime.fromtimestamp(x)
-                    xi = date.strftime('%d/%m %H:%M:%S')
+                    xi = date.strftime('%m/%d/%Y %H:%M:%S')
                 except ValueError:
                     xi = 'NaN'
             else:
                 xi = self.x_format.format(x)
 
             d['xy'] = (xi, '{:0.3f}'.format(y))
+
             self.new_value = d
             self.last_mouse_position = (event.x, event.y)
 
@@ -86,6 +87,18 @@ class DataToolOverlay(TextBoxOverlay):
     #    visible = True
     #    tooltip_mode = Bool(True)
     tooltip_mode = Bool(False)
+    # def overlay(self, component, gc, view_bounds=None, mode="normal"):
+    #     super(DataToolOverlay, self).overlay(component, gc, view_bounds=view_bounds, mode=mode)
+    #
+    #     if self.tool.last_mouse_position:
+    #         xp,yp = self.tool.last_mouse_position
+    #         gc.move_to(xp, component.y)
+    #         gc.line_to(xp, component.y2)
+    #
+    #         gc.move_to(component.x, yp)
+    #         gc.line_to(component.x2, yp)
+    #         gc.set_line_dash([5,5])
+    #         gc.stroke_path()
 
     def _tool_changed(self, old, new):
         if old:
@@ -115,6 +128,7 @@ class DataToolOverlay(TextBoxOverlay):
         ns = []
         if 'xy' in d:
             ns.append('{},{}'.format(*d['xy']))
+
         if 'coeffs' in d:
             cs = d['coeffs']
             xx = ['', 'x', 'x2', 'x3']

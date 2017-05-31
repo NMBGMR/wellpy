@@ -37,6 +37,7 @@ from wellpy.data_model import DataModel
 from wellpy.database_connector import DatabaseConnector, PointIDRecord
 from wellpy.fuzzyfinder import fuzzyfinder
 from wellpy.range_overlay import RangeOverlay
+from wellpy.tools import DataTool, DataToolOverlay
 
 DEPTH_TO_WATER_TITLE = 'Depth To Water'
 SENSOR_TITLE = 'Sensor BGS'
@@ -384,7 +385,13 @@ class WellpyModel(HasTraits):
 
         plot = Plot(data=pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
-        plot.plot((DEPTH_X, DEPTH_Y))[0]
+        line = plot.plot((DEPTH_X, DEPTH_Y))[0]
+
+        dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
+        dto = DataToolOverlay(component=line, tool=dt)
+        line.tools.append(dt)
+        line.overlays.append(dto)
+
         return plot
 
     def _add_depth_to_sensor(self, padding):

@@ -107,6 +107,7 @@ class DataModel:
         cfmt = None
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
+
                 if not self.serial_number:
                     line = line.strip()
                     line = line.split(delimiter)
@@ -206,6 +207,8 @@ class DataModel:
                 if j == 0:
                     v = time.mktime(v.timetuple())
                 arr[i] = v
+            if i > 10:
+                break
 
         self.x = x
         self.temp = t
