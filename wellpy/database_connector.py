@@ -106,8 +106,8 @@ class WaterDepthRecord(HasTraits):
         self.uuid = str(uuid)
         self.point_id = point_id
         # self.measurement_date = measurement_date
-        self.level_status = level_status
-        self.measurement = (time.mktime(measurement_date.timetuple()), depth)
+        # self.level_status = level_status
+        self.measurement = (time.mktime(measurement_date.timetuple()), depth, level_status)
 
 
 class DatabaseConnector(HasTraits):
@@ -129,6 +129,11 @@ class DatabaseConnector(HasTraits):
     def get_point_ids(self):
         with self._get_cursor() as cursor:
             cursor.execute('GetPointIDsPython')
+            return [PointIDRecord(*r) for r in cursor.fetchall()]
+
+    def get_qc_needed_pointids(self):
+        with self._get_cursor() as cursor:
+            cursor.execute('GetPointIDsNoQCPython')
             return [PointIDRecord(*r) for r in cursor.fetchall()]
 
     def get_depth_to_water(self, point_id):
@@ -188,7 +193,7 @@ class DatabaseConnector(HasTraits):
 
         inserted_nresults = len(self.get_continuous_water_levels(pointid))
         return existing_nresults, inserted_nresults
-    
+
     def insert_continuous_water_levels_xml(self, pointid, rows):
 
         schema = self.get_schema()

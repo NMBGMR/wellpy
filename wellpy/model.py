@@ -35,7 +35,8 @@ from pyface.message_dialog import information, warning
 from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
-from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt
+from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
+    ones_like
 
 from globals import DATABSE_DEBUG, FILE_DEBUG
 from wellpy.data_model import DataModel
@@ -105,8 +106,12 @@ class WellpyModel(HasTraits):
 
     point_id_entry = Str
     point_ids = List
+    qc_needed_point_ids = List
     filtered_point_ids = Property(depends_on='point_id_entry')
+
     selected_point_id = Instance(PointIDRecord)
+    selected_qc_point_id = Instance(PointIDRecord)
+
     path = Str
     filename = Property(depends_on='path')
 
@@ -140,16 +145,21 @@ class WellpyModel(HasTraits):
             if self.load_file(FILE_DEBUG):
                 self.fix_adj_head_data(0.25)
                 self.calculate_depth_to_water()
-                self.save_db()
+                # self.save_db()
 
-    def _save_path(self, ext):
-        dlg = FileDialog(action='save as')
-        if dlg.open():
-            p = dlg.path
-            if p:
-                if not p.endswith(ext):
-                    p = '{}{}'.format(p, ext)
-                return p
+    def apply_qc(self):
+        information(None, 'QC Not yet implemented')
+        return
+
+        self._save_db(with_qc=True)
+
+    def load_qc(self):
+        self.qc_needed_pointids = self.db.get_qc_needed_pointids()
+
+    def omit_selection(self):
+        pt = self._plots[DEPTH_TO_WATER]
+        print pt
+        print pt.index.metadata.selections
 
     def save_png(self):
         information(None, 'Save as png not enabled')
@@ -160,26 +170,6 @@ class WellpyModel(HasTraits):
     def save_pdf(self):
 
         self._save_depth_to_water(self._plots[DEPTH_TO_WATER], '.pdf')
-
-    def _save_depth_to_water(self, plot, ext, **render):
-        p = self._save_path(ext)
-        if p:
-            gc = PdfPlotGraphicsContext(filename=p)
-            for lines in plot.plots.itervalues():
-                for line in lines:
-                    for o in line.overlays:
-                        if isinstance(o, DataToolOverlay):
-                            ovisible = o.visible
-                            o.visible = False
-
-            plot.invalidate_and_redraw()
-            gc.render_component(plot, **render)
-            gc.save()
-            for lines in plot.plots.itervalues():
-                for line in lines:
-                    for o in line.overlays:
-                        if isinstance(o, DataToolOverlay):
-                            o.visible = ovisible
 
     def save_csv(self, p, delimiter=','):
         if self.selected_point_id:
@@ -198,25 +188,7 @@ class WellpyModel(HasTraits):
             information(None, 'CSV file saved to "{}"'.format(p))
 
     def save_db(self):
-        keys, data = self._gather_data()
-        if YES == confirm(None, 'Are you sure you want to save to the database?'):
-            pid = self.selected_point_id.name
-            e, i = self.db.insert_continuous_water_levels(pid, data)
-            information(None, 'There were {} existing records for {}. {} records inserted'.format(e, pid, i - e))
-
-    def _gather_data(self, use_isoformat=False):
-        model = self.data_model
-        x = model.x
-        depth_to_water = model.depth_to_water_y
-        ah = model.adjusted_water_head
-        h = model.water_head
-        water_temp = model.water_temp
-
-        if use_isoformat:
-            x = [datetime.fromtimestamp(xi).isoformat() for xi in x]
-
-        data = array((x, h, ah, depth_to_water, water_temp)).T
-        return ('time', 'head', 'adjusted_head', 'depth_to_water', 'water_temp'), data
+        self._save_db()
 
     def retrieve_depth_to_water(self):
         """
@@ -235,21 +207,31 @@ class WellpyModel(HasTraits):
         #     return sd
 
         max_x = self.data_model.x[-1]
-        xs, ys = array(sorted([mi.measurement for mi in ms],
+        xs, ys, ss = array(sorted([mi.measurement for mi in ms],
                               # reverse=True,
                               key=lambda x: x[0])).T
+        xs = asarray(xs, dtype=float)
+        ys = asarray(ys, dtype=float)
+
         idx = where(xs <= max_x)[0]
         idx = hstack((idx, idx[-1] + 1))
 
         xs = xs[idx]
         ys = ys[idx]
+        ss = ss[idx]
 
         plot = self._plots[WATER_LEVEL]
         self.data_model.water_depth_x = xs
         self.data_model.water_depth_y = ys
+        self.data_model.water_depth_status = ss
 
         plot.data.set_data(WATER_DEPTH_X, xs)
         plot.data.set_data(WATER_DEPTH_Y, ys)
+
+        print 'ss', ss
+        ss = where(asarray(ss, dtype=bool))[0]
+        print 'selection', ss
+        plot.default_index.metadata['selection'] = ss
 
         self.refresh_plot()
 
@@ -358,6 +340,7 @@ class WellpyModel(HasTraits):
         :param p:
         :return:
         """
+        self.selected_point_id = None
         try:
             data = DataModel(p)
         except ValueError, e:
@@ -368,22 +351,32 @@ class WellpyModel(HasTraits):
         self.initialize_plot()
 
         # get the point id
-        serial_num = data.serial_number
-        if not serial_num:
-            warning(None, 'Could not extract Serial number from file')
-        else:
-            point_ids = [p for p in self.point_ids if p.serial_num == serial_num]
-            if point_ids:
-                self.selected_point_id = point_ids[-1]
-                self.scroll_to_row = self.point_ids.index(self.selected_point_id)
-
-                self.retrieve_depth_to_water()
-                return True
+        pointid = data.pointid
+        if pointid is None:
+            warning(None, 'Could not extract Point ID from file. Trying Serial Number')
+            serial_num = data.serial_number
+            if not serial_num:
+                warning(None, 'Could not extract Serial number from file')
             else:
-                information(None, 'Serial number="{}"  not in database'.format(serial_num))
+                point_ids = [p for p in self.point_ids if p.serial_num == serial_num]
+                if not point_ids:
+                    information(None, 'Serial number="{}"  not in database'.format(serial_num))
+                else:
+                    self.selected_point_id = point_ids[-1]
+        else:
+            self.selected_point_id = next((p for p in self.point_ids if p.name==pointid), None)
+
+        if self.selected_point_id:
+            self.scroll_to_row = self.point_ids.index(self.selected_point_id)
+
+            self.retrieve_depth_to_water()
+            return True
+        else:
+            warning(None, 'Could not automatically retrieve depth water. Please manually select a Point ID from the '
+                          '"Site" pane')
 
     def initialize_plot(self):
-        container = self.plot_container
+        self.plot_container = container = self._new_plotcontainer()
         self._plots = {}
 
         padding = [70, 10, 5, 5]
@@ -423,6 +416,62 @@ class WellpyModel(HasTraits):
 
         self.refresh_plot()
 
+    # private
+    def _save_db(self, with_qc=False):
+        keys, data = self._gather_data(with_qc=with_qc)
+        if YES == confirm(None, 'Are you sure you want to save to the database?'):
+            pid = self.selected_point_id.name
+            e, i = self.db.insert_continuous_water_levels(pid, data)
+            information(None, 'There were {} existing records for {}. {} records inserted'.format(e, pid, i - e))
+
+    def _save_path(self, ext):
+        dlg = FileDialog(action='save as')
+        if dlg.open():
+            p = dlg.path
+            if p:
+                if not p.endswith(ext):
+                    p = '{}{}'.format(p, ext)
+                return p
+
+    def _save_depth_to_water(self, plot, ext, **render):
+        p = self._save_path(ext)
+        if p:
+            gc = PdfPlotGraphicsContext(filename=p)
+            for lines in plot.plots.itervalues():
+                for line in lines:
+                    for o in line.overlays:
+                        if isinstance(o, DataToolOverlay):
+                            ovisible = o.visible
+                            o.visible = False
+
+            plot.invalidate_and_redraw()
+            gc.render_component(plot, **render)
+            gc.save()
+            for lines in plot.plots.itervalues():
+                for line in lines:
+                    for o in line.overlays:
+                        if isinstance(o, DataToolOverlay):
+                            o.visible = ovisible
+
+    def _gather_data(self, with_qc=False, use_isoformat=False):
+        model = self.data_model
+        x = model.x
+        depth_to_water = model.depth_to_water_y
+        ah = model.adjusted_water_head
+        h = model.water_head
+        water_temp = model.water_temp
+
+        if use_isoformat:
+            x = [datetime.fromtimestamp(xi).isoformat() for xi in x]
+        args = (x, h, ah, depth_to_water, water_temp)
+        keys = ('time', 'head', 'adjusted_head', 'depth_to_water', 'water_temp')
+        if with_qc:
+            args = args + (ones_like(x),)
+            keys = keys + ('qc',)
+
+        data = array(args).T
+        return keys, data
+
     def _add_depth_to_water(self, padding):
         pd = self._plot_data((DEPTH_X, []),
                              (DEPTH_Y, []))
@@ -435,6 +484,11 @@ class WellpyModel(HasTraits):
         dto = DataToolOverlay(component=line, tool=dt)
         line.tools.append(dt)
         line.overlays.append(dto)
+        
+        rt = RangeSelection(plot=line, component=plot)
+        rto = RangeSelectionOverlay(component=line, tool=rt)
+        line.tools.append(rt)
+        line.overlays.append(rto)
 
         return plot
 
@@ -489,7 +543,14 @@ class WellpyModel(HasTraits):
         plot = Plot(data=pd, padding=padding, origin='top left')
 
         plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
-        plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y))[0]
+        plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y))
+        plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y), type='scatter',
+                  marker='circle', marker_size=2.5)
+
+        # ss = where(asarray(sel, dtype=bool))[0]
+        # print ss
+        # sp.index.metadata['selection'] = ss
+
         return plot
 
     def _plot_data(self, x, y):
@@ -498,8 +559,12 @@ class WellpyModel(HasTraits):
         pd.set_data(y[0], y[1])
         return pd
 
-    def _plot_container_default(self):
+    def _new_plotcontainer(self):
         pc = VPlotContainer()
+        return pc
+
+    def _plot_container_default(self):
+        pc = self._new_plotcontainer()
         return pc
 
     # property get/set

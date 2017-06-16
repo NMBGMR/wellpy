@@ -35,6 +35,7 @@ class DataModel:
     water_head = None
     filtered_zeros = None
     serial_number = None
+    pointid = None
     water_depth_x = None
     water_depth_y = None
     depth_to_water_x = None
@@ -48,6 +49,7 @@ class DataModel:
 
         self.water_depth_x = array([])
         self.water_depth_y = array([])
+        self.water_depth_status = array([])
         self.depth_to_water_x = array([])
         self.depth_to_water_y = array([])
 
@@ -108,20 +110,28 @@ class DataModel:
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
 
+                line = line.strip()
+                line = line.split(delimiter)
                 if not self.serial_number:
-                    line = line.strip()
-                    line = line.split(delimiter)
                     if line[0].startswith('Serial number'):
                         self.serial_number = line[0].split('=')[1].strip()
+
+                if not self.pointid:
+                    if line[0].startswith('Location'):
+                        self.pointid = line[0].split('=')[1].strip()
+
                 if i < 53:
                     continue
-                line = line.strip()
                 try:
-                    date, water_head, temp = line.split(delimiter)
+                    date, water_head, temp = line
                 except ValueError:
                     if line.startswith('END OF DATA'):
                         break
-                    continue
+
+                    try:
+                        date, water_head, temp = line[:3]
+                    except ValueError:
+                        continue
 
                 try:
                     water_head = float(water_head)

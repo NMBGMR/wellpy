@@ -58,16 +58,18 @@ class ToolboxPane(TraitsDockPane):
     window = Int(11)
     method = Enum(SMOOTH_METHODS)
 
+    omit_selection_button = Button('Omit Selected Data')
+
     calculate_button = Button('Calculate')
     correct_drift = Bool
     drift_correction_direction = Enum('Forward', 'Reverse')
     save_db_button = Button('Save DB')
     save_csv_button = Button('Save CSV')
-    qc_button = Button('Set QCed')
-
     save_png_button = Button('Save PNG')
     save_pdf_button = Button('Save PDF')
-
+    def _omit_selection_button_fired():
+        self.model.omit_selection()
+        
     def _save_pdf_button_fired(self):
         self.model.save_pdf()
 
@@ -99,7 +101,7 @@ class ToolboxPane(TraitsDockPane):
         self.model.calculate_depth_to_water(self.correct_drift)
 
     def traits_view(self):
-        manual_grp = VGroup(Item('pane.constant_offset', label='Constant Offset'),
+        manual_grp = VGroup(UItem('pane.omit_selection_button'),#Item('pane.constant_offset', label='Constant Offset'),
                             show_border=True, label='Manual')
 
         auto_grp = VGroup(HGroup(Item('pane.adj_head_threshold', label='Threshold'),
@@ -125,7 +127,7 @@ class ToolboxPane(TraitsDockPane):
                                label='Depth To Water',
                                show_border=True)
         v = View(VGroup(
-            # manual_grp,
+            manual_grp,
             auto_grp, smooth_grp, calculate_grp))
         return v
 
@@ -155,11 +157,21 @@ class QCPane(TraitsDockPane):
 
     apply_qc_button = Button('Apply QC')
 
+    load_qc_button = Button('Load QC')
     def _apply_qc_button_fired(self):
         self.model.apply_qc()
 
+    def _load_qc_button_fired(self):
+        self.model.load_qc()
+
     def traits_view(self):
-        v = View(UItem('pane.apply_qc_button'))
+        v = View(HGroup(UItem('pane.apply_qc_button'),
+                        UItem('pane.load_qc_button')),
+                 UItem('qc_needed_point_ids',
+                       editor=TabularEditor(selected='selected_qc_point_id',
+                                            editable=False,
+                                            adapter=PointIDAdapter()))
+                 )
         return v
 
 
