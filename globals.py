@@ -17,5 +17,6 @@ import os
 
 DATABSE_DEBUG = os.environ.get('DATABASE_DEBUG')
 FILE_DEBUG = os.environ.get('FILE_DEBUG')
-
+# FILE_DEBUUG = None
+QC_DEBUG = os.environ.get('QC_DEBUG')
 # ============= EOF =============================================

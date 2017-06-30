@@ -15,7 +15,7 @@
 # ===============================================================================
 import os
 from plistlib import Data
-
+import time
 from chaco.axis import PlotAxis
 from chaco.pdf_graphics_context import PdfPlotGraphicsContext
 from chaco.plot_containers import VPlotContainer
@@ -32,13 +32,13 @@ from pyface.confirmation_dialog import confirm
 from pyface.constant import YES
 from pyface.file_dialog import FileDialog
 from pyface.message_dialog import information, warning
-from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int
+from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int, Any
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
 from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
-    ones_like
+    ones_like, zeros
 
-from globals import DATABSE_DEBUG, FILE_DEBUG
+from globals import DATABSE_DEBUG, FILE_DEBUG, QC_DEBUG
 from wellpy.data_model import DataModel
 from wellpy.database_connector import DatabaseConnector, PointIDRecord
 from wellpy.fuzzyfinder import fuzzyfinder
@@ -106,11 +106,12 @@ class WellpyModel(HasTraits):
 
     point_id_entry = Str
     point_ids = List
-    qc_needed_point_ids = List
+    selected_point_id = Instance(PointIDRecord)
     filtered_point_ids = Property(depends_on='point_id_entry')
 
-    selected_point_id = Instance(PointIDRecord)
+    qc_point_ids = List
     selected_qc_point_id = Instance(PointIDRecord)
+    dclick_qc_point_id = Any
 
     path = Str
     filename = Property(depends_on='path')
@@ -147,14 +148,54 @@ class WellpyModel(HasTraits):
                 self.calculate_depth_to_water()
                 # self.save_db()
 
+        self.load_qc()
+
     def apply_qc(self):
         information(None, 'QC Not yet implemented')
         return
 
         self._save_db(with_qc=True)
 
+    def load_qc_data(self):
+        pid = self.selected_qc_point_id
+        if pid is None:
+            return
+
+        records = self.db.get_continuous_water_levels(pid.name, qced=0)
+        if records:
+            self.initialize_plot()
+            """
+            PointID, Timestamp, 'head', 'adjusted_head', 'depth_to_water', 'water_temp', note
+            """
+            n = len(records)
+            xs = zeros(n)
+            hs = zeros(n)
+            ahs = zeros(n)
+            ds = zeros(n)
+            for i, ri in enumerate(sorted(records, key=lambda x: x[1])):
+                x = time.mktime(ri[1].timetuple())
+                h = float(ri[2])
+                xs[i] = x
+                # hs[i] = h
+                ah = float(ri[3])
+                ahs[i] = ah
+                ds[i]= float(ri[4])
+                # wt = float(ri[5])
+
+            plot = self._plots[ADJ_WATER_HEAD]
+
+            plot.data.set_data(ADJUSTED_WATER_HEAD_X, xs)
+            plot.data.set_data(ADJUSTED_WATER_HEAD_Y, ahs)
+
+            plot = self._plots[DEPTH_TO_WATER]
+            plot.data.set_data(DEPTH_X, xs)
+            plot.data.set_data(DEPTH_Y, ds)
+            self.refresh_plot()
+        else:
+            information('No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
+
     def load_qc(self):
-        self.qc_needed_pointids = self.db.get_qc_needed_pointids()
+        self.qc_point_ids = self.db.get_qc_point_ids()
 
     def omit_selection(self):
         pt = self._plots[DEPTH_TO_WATER]
@@ -208,8 +249,8 @@ class WellpyModel(HasTraits):
 
         max_x = self.data_model.x[-1]
         xs, ys, ss = array(sorted([mi.measurement for mi in ms],
-                              # reverse=True,
-                              key=lambda x: x[0])).T
+                                  # reverse=True,
+                                  key=lambda x: x[0])).T
         xs = asarray(xs, dtype=float)
         ys = asarray(ys, dtype=float)
 
@@ -364,7 +405,7 @@ class WellpyModel(HasTraits):
                 else:
                     self.selected_point_id = point_ids[-1]
         else:
-            self.selected_point_id = next((p for p in self.point_ids if p.name==pointid), None)
+            self.selected_point_id = next((p for p in self.point_ids if p.name == pointid), None)
 
         if self.selected_point_id:
             self.scroll_to_row = self.point_ids.index(self.selected_point_id)
@@ -417,6 +458,7 @@ class WellpyModel(HasTraits):
         self.refresh_plot()
 
     # private
+
     def _save_db(self, with_qc=False):
         keys, data = self._gather_data(with_qc=with_qc)
         if YES == confirm(None, 'Are you sure you want to save to the database?'):
@@ -484,7 +526,7 @@ class WellpyModel(HasTraits):
         dto = DataToolOverlay(component=line, tool=dt)
         line.tools.append(dt)
         line.overlays.append(dto)
-        
+
         rt = RangeSelection(plot=line, component=plot)
         rto = RangeSelectionOverlay(component=line, tool=rt)
         line.tools.append(rt)
@@ -523,8 +565,14 @@ class WellpyModel(HasTraits):
 
     def _add_adjusted_water_head(self, padding):
         data = self.data_model
-        pd = self._plot_data((ADJUSTED_WATER_HEAD_X, data.x),
-                             (ADJUSTED_WATER_HEAD_Y, data.adjusted_water_head))
+        if data:
+            x=data.x
+            y=data.adjusted_water_head
+        else:
+            x,y = [],[]
+
+        pd = self._plot_data((ADJUSTED_WATER_HEAD_X, x),
+                             (ADJUSTED_WATER_HEAD_Y, y))
 
         plot = Plot(data=pd, padding=padding)
 
@@ -534,8 +582,11 @@ class WellpyModel(HasTraits):
         return plot
 
     def _add_water_depth(self, padding):
-        x = self.data_model.water_depth_x
-        y = self.data_model.water_depth_y
+        if self.data_model:
+            x = self.data_model.water_depth_x
+            y = self.data_model.water_depth_y
+        else:
+            x,y = [],[]
 
         # plot, line, scatter = self._add_line_scatter('', 'Manual BGS', padding, x=x)
         pd = self._plot_data((WATER_DEPTH_X, x),

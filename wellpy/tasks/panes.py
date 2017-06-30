@@ -20,7 +20,7 @@ from pyface.constant import OK
 from pyface.file_dialog import FileDialog
 from pyface.tasks.traits_dock_pane import TraitsDockPane
 from pyface.tasks.traits_task_pane import TraitsTaskPane
-from traits.api import Button, Float, Property, Int, Enum, Bool
+from traits.api import Button, Float, Property, Int, Enum, Bool, Event
 from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring, EnumEditor
 from traitsui.tabular_adapter import TabularAdapter
 
@@ -67,7 +67,8 @@ class ToolboxPane(TraitsDockPane):
     save_csv_button = Button('Save CSV')
     save_png_button = Button('Save PNG')
     save_pdf_button = Button('Save PDF')
-    def _omit_selection_button_fired():
+
+    def _omit_selection_button_fired(self):
         self.model.omit_selection()
         
     def _save_pdf_button_fired(self):
@@ -157,7 +158,12 @@ class QCPane(TraitsDockPane):
 
     apply_qc_button = Button('Apply QC')
 
-    load_qc_button = Button('Load QC')
+    load_qc_button = Button('Refresh QC Needed')
+    dclicked = Event
+
+    def _dclicked_fired(self):
+        self.model.load_qc_data()
+
     def _apply_qc_button_fired(self):
         self.model.apply_qc()
 
@@ -165,13 +171,16 @@ class QCPane(TraitsDockPane):
         self.model.load_qc()
 
     def traits_view(self):
+        pa = PointIDAdapter()
+        pa.columns = pa.columns[:1]
+
         v = View(HGroup(UItem('pane.apply_qc_button'),
                         UItem('pane.load_qc_button')),
-                 UItem('qc_needed_point_ids',
+                 UItem('qc_point_ids',
                        editor=TabularEditor(selected='selected_qc_point_id',
+                                            dclicked='pane.dclicked',
                                             editable=False,
-                                            adapter=PointIDAdapter()))
-                 )
+                                            adapter=pa)))
         return v
 
 

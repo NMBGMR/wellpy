@@ -86,7 +86,7 @@ class PointIDRecord(HasTraits):
     install_date = None
     serial_num = Str
 
-    def __init__(self, name, install_date, serial_num):
+    def __init__(self, name, install_date=None, serial_num=None):
         self.name = name
         self.install_date = install_date
         self.serial_num = serial_num or ''
@@ -131,9 +131,9 @@ class DatabaseConnector(HasTraits):
             cursor.execute('GetPointIDsPython')
             return [PointIDRecord(*r) for r in cursor.fetchall()]
 
-    def get_qc_needed_pointids(self):
+    def get_qc_point_ids(self, qced=False):
         with self._get_cursor() as cursor:
-            cursor.execute('GetPointIDsNoQCPython')
+            cursor.execute('GetPointIDsQCdPython %d', (int(qced),))
             return [PointIDRecord(*r) for r in cursor.fetchall()]
 
     def get_depth_to_water(self, point_id):
@@ -265,7 +265,7 @@ class DatabaseConnector(HasTraits):
             if low or high or qced is not None:
                 args = (point_id, low, high, qced)
                 cmd = '{}, %s, %s, %d'.format(cmd)
-            print '-------------', cmd, args
+            # print '-------------', cmd, args
             cursor.execute(cmd, args)
             return cursor.fetchall()
 
