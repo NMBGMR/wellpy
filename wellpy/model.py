@@ -28,6 +28,8 @@ from chaco.tools.range_selection import RangeSelection
 from chaco.tools.range_selection_overlay import RangeSelectionOverlay
 from datetime import datetime
 
+from chaco.tools.scatter_inspector import ScatterInspector
+from chaco.tools.select_tool import SelectTool
 from pyface.confirmation_dialog import confirm
 from pyface.constant import YES
 from pyface.file_dialog import FileDialog
@@ -36,7 +38,7 @@ from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, 
 from chaco.scales.api import CalendarScaleSystem
 from chaco.scales_tick_generator import ScalesTickGenerator
 from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
-    ones_like, zeros
+    ones_like, zeros, delete
 
 from globals import DATABSE_DEBUG, FILE_DEBUG, QC_DEBUG
 from wellpy.data_model import DataModel
@@ -57,6 +59,9 @@ WATER_DEPTH_X = 'water_depth_x'
 ADJUSTED_WATER_HEAD_Y = 'adjusted_water_head_y'
 ADJUSTED_WATER_HEAD_X = 'adjusted_water_head_x'
 
+QC_ADJUSTED_WATER_HEAD_Y = 'adjusted_water_head_y'
+QC_ADJUSTED_WATER_HEAD_X = 'adjusted_water_head_x'
+
 WATER_HEAD_Y = 'water_head_y'
 WATER_HEAD_X = 'water_head_x'
 
@@ -66,10 +71,15 @@ DEPTH_SENSOR_X = 'depth_sensor_x'
 DEPTH_Y = 'depth_y'
 DEPTH_X = 'depth_x'
 
+QC_DEPTH_Y = 'depth_y'
+QC_DEPTH_X = 'depth_x'
+
 WATER_HEAD = 'water_head'
 ADJ_WATER_HEAD = 'adjusted_water_head'
+QC_ADJ_WATER_HEAD = 'adjusted_water_head'
 DEPTH_TO_SENSOR = 'depth_to_sensor'
 DEPTH_TO_WATER = 'depth_to_water'
+QC_DEPTH_TO_WATER = 'depth_to_water'
 WATER_LEVEL = 'water_level'
 
 
@@ -151,8 +161,8 @@ class WellpyModel(HasTraits):
         self.load_qc()
 
     def apply_qc(self):
-        information(None, 'QC Not yet implemented')
-        return
+        # information(None, 'QC Not yet implemented')
+        # return
 
         self._save_db(with_qc=True)
 
@@ -163,11 +173,12 @@ class WellpyModel(HasTraits):
 
         records = self.db.get_continuous_water_levels(pid.name, qced=0)
         if records:
-            self.initialize_plot()
+            self.initialize_plot(qc=True)
             """
             PointID, Timestamp, 'head', 'adjusted_head', 'depth_to_water', 'water_temp', note
             """
             n = len(records)
+
             xs = zeros(n)
             hs = zeros(n)
             ahs = zeros(n)
@@ -179,7 +190,7 @@ class WellpyModel(HasTraits):
                 # hs[i] = h
                 ah = float(ri[3])
                 ahs[i] = ah
-                ds[i]= float(ri[4])
+                ds[i] = float(ri[4])
                 # wt = float(ri[5])
 
             plot = self._plots[ADJ_WATER_HEAD]
@@ -190,6 +201,18 @@ class WellpyModel(HasTraits):
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, xs)
             plot.data.set_data(DEPTH_Y, ds)
+
+            qced_records = self.db.get_continuous_water_levels(pid.name, qced=1)
+            if qced_records:
+                plot = self._plots[QC_ADJ_WATER_HEAD]
+
+                plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, xs)
+                plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, ahs)
+
+                plot = self._plots[QC_DEPTH_TO_WATER]
+                plot.data.set_data(QC_DEPTH_X, xs)
+                plot.data.set_data(QC_DEPTH_Y, ds)
+
             self.refresh_plot()
         else:
             information('No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
@@ -198,9 +221,19 @@ class WellpyModel(HasTraits):
         self.qc_point_ids = self.db.get_qc_point_ids()
 
     def omit_selection(self):
-        pt = self._plots[DEPTH_TO_WATER]
-        print pt
-        print pt.index.metadata.selections
+        pt = self._plots[WATER_LEVEL]
+
+        for p in pt.plots.itervalues():
+            p = p[0]
+            sel = p.index.metadata['selections']
+            x = p.index.get_data()
+            y = p.value.get_data()
+            p.index.set_data(delete(x, sel))
+            p.value.set_data(delete(y, sel))
+
+            p.index.metadata['selections'] = []
+
+        self.refresh_plot()
 
     def save_png(self):
         information(None, 'Save as png not enabled')
@@ -416,7 +449,7 @@ class WellpyModel(HasTraits):
             warning(None, 'Could not automatically retrieve depth water. Please manually select a Point ID from the '
                           '"Site" pane')
 
-    def initialize_plot(self):
+    def initialize_plot(self, qc=False):
         self.plot_container = container = self._new_plotcontainer()
         self._plots = {}
 
@@ -429,7 +462,7 @@ class WellpyModel(HasTraits):
 
         index_range = None
         for i, (k, f) in enumerate(funcs):
-            plot = f(padding)
+            plot = f(padding, qc)
             if i == 0:
                 bottom_axis = PlotAxis(plot, orientation='bottom',  # mapper=xmapper,
                                        tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
@@ -443,6 +476,16 @@ class WellpyModel(HasTraits):
             container.add(plot)
             self._plots[k] = plot
 
+        if qc:
+            plot = self._plots[DEPTH_TO_WATER]
+            plot.data.set_data(QC_DEPTH_X, [1,2,3])
+            plot.data.set_data(QC_DEPTH_Y, [10,20, 30])
+            plot.plot((QC_DEPTH_X, QC_DEPTH_Y), linecolor='red')
+
+            plot = self._plots[QC_ADJ_WATER_HEAD]
+            plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, [1,2,3])
+            plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, [30,20, 10])
+            plot.plot((QC_ADJUSTED_WATER_HEAD_X, QC_ADJUSTED_WATER_HEAD_Y), linecolor='red')
         # plot = self._add_water_depth(padding)
         # plot.index_range = index_range
         # container.add(plot)
@@ -514,7 +557,7 @@ class WellpyModel(HasTraits):
         data = array(args).T
         return keys, data
 
-    def _add_depth_to_water(self, padding):
+    def _add_depth_to_water(self, padding, *args, **kw):
         pd = self._plot_data((DEPTH_X, []),
                              (DEPTH_Y, []))
 
@@ -534,7 +577,7 @@ class WellpyModel(HasTraits):
 
         return plot
 
-    def _add_depth_to_sensor(self, padding):
+    def _add_depth_to_sensor(self, padding, *args, **kw):
         pd = self._plot_data((DEPTH_SENSOR_X, []),
                              (DEPTH_SENSOR_Y, []))
 
@@ -545,7 +588,7 @@ class WellpyModel(HasTraits):
 
         return plot
 
-    def _add_water_head(self, padding):
+    def _add_water_head(self, padding, *args, **kw):
 
         data = self.data_model
         pd = self._plot_data((WATER_HEAD_X, data.x),
@@ -563,13 +606,13 @@ class WellpyModel(HasTraits):
         # self._plots[WATER_HEAD] = plot
         return plot
 
-    def _add_adjusted_water_head(self, padding):
+    def _add_adjusted_water_head(self, padding, *args, **kw):
         data = self.data_model
         if data:
-            x=data.x
-            y=data.adjusted_water_head
+            x = data.x
+            y = data.adjusted_water_head
         else:
-            x,y = [],[]
+            x, y = [], []
 
         pd = self._plot_data((ADJUSTED_WATER_HEAD_X, x),
                              (ADJUSTED_WATER_HEAD_Y, y))
@@ -581,12 +624,12 @@ class WellpyModel(HasTraits):
         # self._plots[ADJ_WATER_HEAD] = plot
         return plot
 
-    def _add_water_depth(self, padding):
+    def _add_water_depth(self, padding, *args, **kw):
         if self.data_model:
             x = self.data_model.water_depth_x
             y = self.data_model.water_depth_y
         else:
-            x,y = [],[]
+            x, y = [], []
 
         # plot, line, scatter = self._add_line_scatter('', 'Manual BGS', padding, x=x)
         pd = self._plot_data((WATER_DEPTH_X, x),
@@ -595,9 +638,10 @@ class WellpyModel(HasTraits):
 
         plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
         plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y))
-        plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y), type='scatter',
-                  marker='circle', marker_size=2.5)
-
+        p = plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y), type='scatter',
+                  marker='circle', marker_size=2.5)[0]
+        si = ScatterInspector(component=p)
+        p.tools.append(si)
         # ss = where(asarray(sel, dtype=bool))[0]
         # print ss
         # sp.index.metadata['selection'] = ss
