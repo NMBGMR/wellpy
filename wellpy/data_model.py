@@ -84,6 +84,7 @@ class DataModel:
 
             sidx, eidx = idxs[0], idxs[1]
             sx, ex = x[sidx], x[eidx]
+            print sx, ex, selection
             if selection:
                 if sx >= selection[0] and ex <= selection[1]:
                     fs.append((offset, sidx, eidx, sx, ex))
