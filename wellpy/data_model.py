@@ -101,7 +101,7 @@ class DataModel:
                     if sx >= selection[0] and ex <= selection[1]:
                         offset = ys[sidx] - ys[eidx]
                         fs.append((offset, sidx, eidx, sx, ex))
-                        ys[sidx:eidx+1] += offset
+                        ys[sidx:] += offset
         else:
             while 1:
                 idxs = where(abs(diff(ys)) >= threshold)[0]
