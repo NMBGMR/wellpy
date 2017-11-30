@@ -80,12 +80,14 @@ class DataModel:
             # oxs = x[mask]
 
             idxs = where(abs(diff(ys)) >= threshold)[0]
+            print idxs
             if idxs.any():
                 if idxs.shape[0] == 1:
                     idxs = [idxs[0], ys.shape[0] - 1]
 
                 sidx, eidx = idxs[0], idxs[1]
                 sx, ex = x[sidx], x[eidx]
+                print 'sxex', sx, ex
                 if sx >= selection[0] and ex <= selection[1]:
 
                     offset = ys[idxs[0]] - ys[idxs[0] + 1]
