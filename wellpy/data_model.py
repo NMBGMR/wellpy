@@ -71,6 +71,8 @@ class DataModel:
         # find zeros
         zs = where(ys == 0)[0]
         fs = []
+
+        print 'selection', selection
         while 1:
             idxs = where(abs(diff(ys)) >= threshold)[0]
             if not idxs.any():
@@ -82,8 +84,11 @@ class DataModel:
 
             sidx, eidx = idxs[0], idxs[1]
             sx, ex = x[sidx], x[eidx]
-            if sx >= selection[0] and ex <= selection[1]:
-                fs.append((offset, sidx, eidx, sx, ex))
+            if selection:
+                if sx >= selection[0] and ex <= selection[1]:
+                    fs.append((offset, sidx, eidx, sx, ex))
+                    ys[idxs[0] + 1:idxs[1] + 1] += offset
+            else:
                 ys[idxs[0] + 1:idxs[1] + 1] += offset
 
         return ys, zs, fs
