@@ -18,7 +18,7 @@ import os
 import time
 
 from datetime import datetime
-from numpy import empty, polyfit, polyval, array, where, diff
+from numpy import empty, polyfit, polyval, array, where, diff, logical_and
 from openpyxl import load_workbook
 
 from wellpy.sigproc import smooth
@@ -73,27 +73,38 @@ class DataModel:
         fs = []
 
         print 'selection', selection
-        while 1:
+        # if sx >= selection[0] and ex <= selection[1]:
+        if selection:
+            # mask = logical_and(x > selection[0], x < selection[1])
+            # oys = ys[mask]
+            # oxs = x[mask]
+
             idxs = where(abs(diff(ys)) >= threshold)[0]
-            if not idxs.any():
-                break
-            elif idxs.shape[0] == 1:
-                idxs = [idxs[0], ys.shape[0] - 1]
+            if idxs.any():
+                if idxs.shape[0] == 1:
+                    idxs = [idxs[0], ys.shape[0] - 1]
 
-            offset = ys[idxs[0]] - ys[idxs[0] + 1]
-
-            sidx, eidx = idxs[0], idxs[1]
-            sx, ex = x[sidx], x[eidx]
-            print sx, ex, selection
-            if selection:
+                sidx, eidx = idxs[0], idxs[1]
+                sx, ex = x[sidx], x[eidx]
                 if sx >= selection[0] and ex <= selection[1]:
+
+                    offset = ys[idxs[0]] - ys[idxs[0] + 1]
                     fs.append((offset, sidx, eidx, sx, ex))
                     ys[idxs[0] + 1:idxs[1] + 1] += offset
-                else:
+        else:
+            while 1:
+                idxs = where(abs(diff(ys)) >= threshold)[0]
+                if not idxs.any():
                     break
-            else:
-                ys[idxs[0] + 1:idxs[1] + 1] += offset
+                elif idxs.shape[0] == 1:
+                    idxs = [idxs[0], ys.shape[0] - 1]
 
+                offset = ys[idxs[0]] - ys[idxs[0] + 1]
+
+                sidx, eidx = idxs[0], idxs[1]
+                sx, ex = x[sidx], x[eidx]
+                fs.append((offset, sidx, eidx, sx, ex))
+                ys[idxs[0] + 1:idxs[1] + 1] += offset
         return ys, zs, fs
 
     # private

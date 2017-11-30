@@ -292,43 +292,44 @@ class WellpyModel(HasTraits):
         """
 
         pid = self.selected_point_id
-        ms = self.db.get_depth_to_water(pid.name)
-        # for mi in ms:
-        #     print mi.
-        # print ms
+        if pid is not None:
+            ms = self.db.get_depth_to_water(pid.name)
+            # for mi in ms:
+            #     print mi.
+            # print ms
 
-        # def factory(mm):
-        #     sd = SensorDepth()
-        #     return sd
+            # def factory(mm):
+            #     sd = SensorDepth()
+            #     return sd
 
-        max_x = self.data_model.x[-1]
-        xs, ys, ss = array(sorted([mi.measurement for mi in ms],
-                                  # reverse=True,
-                                  key=lambda x: x[0])).T
-        xs = asarray(xs, dtype=float)
-        ys = asarray(ys, dtype=float)
+            max_x = self.data_model.x[-1]
+            xs, ys, ss = array(sorted([mi.measurement for mi in ms],
+                                      # reverse=True,
+                                      key=lambda x: x[0])).T
+            xs = asarray(xs, dtype=float)
+            ys = asarray(ys, dtype=float)
 
-        idx = where(xs <= max_x)[0]
-        idx = hstack((idx, idx[-1] + 1))
+            idx = where(xs <= max_x)[0]
+            idx = hstack((idx, idx[-1] + 1))
 
-        xs = xs[idx]
-        ys = ys[idx]
-        ss = ss[idx]
+            xs = xs[idx]
+            ys = ys[idx]
+            ss = ss[idx]
 
-        plot = self._plots[WATER_LEVEL]
-        self.data_model.water_depth_x = xs
-        self.data_model.water_depth_y = ys
-        self.data_model.water_depth_status = ss
+            plot = self._plots[WATER_LEVEL]
+            self.data_model.water_depth_x = xs
+            self.data_model.water_depth_y = ys
+            self.data_model.water_depth_status = ss
 
-        plot.data.set_data(WATER_DEPTH_X, xs)
-        plot.data.set_data(WATER_DEPTH_Y, ys)
+            plot.data.set_data(WATER_DEPTH_X, xs)
+            plot.data.set_data(WATER_DEPTH_Y, ys)
 
-        print 'ss', ss
-        ss = where(asarray(ss, dtype=bool))[0]
-        print 'selection', ss
-        plot.default_index.metadata['selection'] = ss
+            print 'ss', ss
+            ss = where(asarray(ss, dtype=bool))[0]
+            print 'selection', ss
+            plot.default_index.metadata['selection'] = ss
 
-        self.refresh_plot()
+            self.refresh_plot()
 
     def calculate_depth_to_water(self, correct_drift=False):
         """
