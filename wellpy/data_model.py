@@ -18,7 +18,7 @@ import os
 import time
 
 from datetime import datetime
-from numpy import empty, polyfit, polyval, array, where, diff, logical_and
+from numpy import empty, polyfit, polyval, array, where, diff, logical_and, hstack
 from openpyxl import load_workbook
 
 from wellpy.sigproc import smooth
@@ -83,15 +83,18 @@ class DataModel:
             print idxs
             if idxs.any():
                 if idxs.shape[0] == 1:
-                    idxs = [idxs[0], ys.shape[0] - 1]
+                    idxs = array([idxs[0], ys.shape[0] - 1])
 
                 n = idxs.shape[0]
-                for sidx,eidx in idxs.reshape(n/2, 2):
+                if n % 2:
+                    idxs = hstack((idxs, [-1]))
+                    n += 1
+
+                for sidx, eidx in idxs.reshape(n / 2, 2):
                     # sidx, eidx = idxs[0], idxs[1]
                     sx, ex = x[sidx], x[eidx]
                     print 'sxex', sx, ex
                     if sx >= selection[0] and ex <= selection[1]:
-
                         offset = ys[idxs[0]] - ys[idxs[0] + 1]
                         fs.append((offset, sidx, eidx, sx, ex))
                         ys[idxs[0] + 1:idxs[1] + 1] += offset
