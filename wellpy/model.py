@@ -593,10 +593,10 @@ class WellpyModel(HasTraits):
         line.tools.append(dt)
         line.overlays.append(dto)
 
-        rt = RangeSelection(plot=line, component=plot)
-        rto = RangeSelectionOverlay(component=line, tool=rt)
-        line.tools.append(rt)
-        line.overlays.append(rto)
+        # rt = RangeSelection(plot=line, component=li)
+        # rto = RangeSelectionOverlay(component=line, tool=rt)
+        # line.tools.append(rt)
+        # line.overlays.append(rto)
 
         return plot
 
@@ -645,14 +645,8 @@ class WellpyModel(HasTraits):
         plot.y_axis.title = ADJUSTED_HEAD_TITLE
         lineplot = plot.plot((ADJUSTED_WATER_HEAD_X, ADJUSTED_WATER_HEAD_Y))[0]
 
-        from chaco.tools.range_selection import RangeSelection
-        from chaco.tools.range_selection_overlay import RangeSelectionOverlay
-
-        # plot = self.plots[plotid].plots['plot{}'.format(series)][0]
-        #
-        lineplot.active_tool = tool = RangeSelection(plot, left_button_selects=True)
-
-        lineplot.overlays.append(RangeSelectionOverlay(component=plot))
+        lineplot.active_tool = tool = RangeSelection(lineplot, left_button_selects=True)
+        lineplot.overlays.append(RangeSelectionOverlay(component=lineplot))
 
         self._range_tool = tool
         # self._plots[ADJ_WATER_HEAD] = plot
