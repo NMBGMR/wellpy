@@ -56,6 +56,9 @@ class DataModel:
     def get_water_head(self):
         return array(self._water_head)
 
+    def set_water_head(self, v):
+        self._water_head = v
+
     def get_depth_to_water(self):
         return array(self.depth_to_water_y)
 
@@ -72,7 +75,7 @@ class DataModel:
         zs = where(ys == 0)[0]
         fs = []
 
-        print 'selection', selection
+        # print 'selection', selection
         # if sx >= selection[0] and ex <= selection[1]:
         if selection:
             # mask = logical_and(x > selection[0], x < selection[1])
@@ -80,23 +83,23 @@ class DataModel:
             # oxs = x[mask]
 
             idxs = where(abs(diff(ys)) >= threshold)[0]
-            print idxs
             if idxs.any():
                 if idxs.shape[0] == 1:
                     idxs = array([idxs[0], ys.shape[0] - 1])
 
-                n = idxs.shape[0]
-                if n % 2:
-                    idxs = hstack((idxs, [-1]))
-                    n += 1
+                # n = idxs.shape[0]
+                # if n % 2:
+                #     idxs = hstack((idxs, [-1]))
+                #     n += 1
 
-                for sidx, eidx in idxs.reshape(n / 2, 2):
+                # for sidx, eidx in idxs.reshape(n / 2, 2):
+                for sidx in idxs:
                     # sidx, eidx = idxs[0], idxs[1]
                     eidx = sidx+1
                     sx, ex = x[sidx], x[eidx]
-                    print 'sxex', sx, ex
+                    # print 'sxex', sx, ex
                     if sx >= selection[0] and ex <= selection[1]:
-                        offset = ys[idxs[0]] - ys[idxs[0] + 1]
+                        offset = ys[sidx] - ys[eidx + 1]
                         fs.append((offset, sidx, eidx, sx, ex))
                         ys[idxs[0] + 1:idxs[1] + 1] += offset
         else:

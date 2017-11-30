@@ -391,6 +391,7 @@ class WellpyModel(HasTraits):
         ys, zs, fs = self.data_model.fix_data(ys, threshold, self._range_tool.selection)
         self.auto_results = [AutoResult(*fi) for fi in fs]
 
+        self.data_model.set_water_head(ys)
         # plot fixed ranges on raw plot
         # plot = self._plots[WATER_HEAD]
         # plot.auto_fixed_range_overlay.ranges = fs
