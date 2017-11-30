@@ -65,7 +65,7 @@ class DataModel:
 
         return pys
 
-    def fix_data(self, ys, threshold):
+    def fix_data(self, ys, threshold, selection):
         x = self.x
         ys = array(ys[:])
         # find zeros
@@ -82,8 +82,9 @@ class DataModel:
 
             sidx, eidx = idxs[0], idxs[1]
             sx, ex = x[sidx], x[eidx]
-            fs.append((offset, sidx, eidx, sx, ex))
-            ys[idxs[0]+1:idxs[1]+1] += offset
+            if sx>=selection[0] and ex<=selection[1]:
+                fs.append((offset, sidx, eidx, sx, ex))
+                ys[idxs[0]+1:idxs[1]+1] += offset
 
         return ys, zs, fs
 

@@ -387,7 +387,7 @@ class WellpyModel(HasTraits):
         :return:
         """
         ys = self.data_model.get_water_head()
-        ys, zs, fs = self.data_model.fix_data(ys, threshold)
+        ys, zs, fs = self.data_model.fix_data(ys, threshold, self._range_tool.selection)
         self.auto_results = [AutoResult(*fi) for fi in fs]
 
         # plot fixed ranges on raw plot
@@ -643,7 +643,18 @@ class WellpyModel(HasTraits):
         plot = Plot(data=pd, padding=padding)
 
         plot.y_axis.title = ADJUSTED_HEAD_TITLE
-        plot.plot((ADJUSTED_WATER_HEAD_X, ADJUSTED_WATER_HEAD_Y))[0]
+        lineplot = plot.plot((ADJUSTED_WATER_HEAD_X, ADJUSTED_WATER_HEAD_Y))[0]
+
+        from chaco.tools.range_selection import RangeSelection
+        from chaco.tools.range_selection_overlay import RangeSelectionOverlay
+
+        # plot = self.plots[plotid].plots['plot{}'.format(series)][0]
+        #
+        lineplot.active_tool = tool = RangeSelection(plot, left_button_selects=True)
+
+        lineplot.overlays.append(RangeSelectionOverlay(component=plot))
+
+        self._range_tool = tool
         # self._plots[ADJ_WATER_HEAD] = plot
         return plot
 
