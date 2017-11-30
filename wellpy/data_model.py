@@ -92,6 +92,7 @@ class DataModel:
 
                 for sidx, eidx in idxs.reshape(n / 2, 2):
                     # sidx, eidx = idxs[0], idxs[1]
+                    eidx = sidx+1
                     sx, ex = x[sidx], x[eidx]
                     print 'sxex', sx, ex
                     if sx >= selection[0] and ex <= selection[1]:

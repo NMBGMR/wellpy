@@ -138,7 +138,7 @@ class DatabaseConnector(HasTraits):
 
     def get_depth_to_water(self, point_id):
         with self._get_cursor() as cursor:
-            cursor.execute('GetWaterLevelsPython %s', (point_id,))
+            cursor.execute('GetWaterLevelsPython %s', (point_id.upper(),))
             return [WaterDepthRecord(*r) for r in cursor.fetchall()]
 
     def get_schema(self):
@@ -259,7 +259,7 @@ class DatabaseConnector(HasTraits):
 
     def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
         with self._get_cursor() as cursor:
-            cmd, args = 'GetWLCPressurePython %s', (point_id,)
+            cmd, args = 'GetWLCPressurePython %s', (point_id.upper(),)
             # cmd, args = 'GetWaterLevelsContinuousAcousticPython %s', (point_id,)
 
             if low or high or qced is not None:
