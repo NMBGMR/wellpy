@@ -109,7 +109,7 @@ class DataModel:
         cfmt = None
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
-
+                oline = line
                 line = line.strip()
                 line = line.split(delimiter)
                 if not self.serial_number:
@@ -125,7 +125,7 @@ class DataModel:
                 try:
                     date, water_head, temp = line
                 except ValueError:
-                    if line.startswith('END OF DATA'):
+                    if oline.startswith('END OF DATA'):
                         break
 
                     try:

@@ -466,8 +466,8 @@ class WellpyModel(HasTraits):
         if self.selected_point_id:
             self.scroll_to_row = self.point_ids.index(self.selected_point_id)
 
-            self.retrieve_depth_to_water()
-            return True
+        self.retrieve_depth_to_water()
+        return True
             # else:
             #     warning(None, 'Could not automatically retrieve depth water. Please manually select a Point ID from the '
             #                   '"Site" pane')
