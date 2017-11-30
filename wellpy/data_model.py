@@ -85,14 +85,16 @@ class DataModel:
                 if idxs.shape[0] == 1:
                     idxs = [idxs[0], ys.shape[0] - 1]
 
-                sidx, eidx = idxs[0], idxs[1]
-                sx, ex = x[sidx], x[eidx]
-                print 'sxex', sx, ex
-                if sx >= selection[0] and ex <= selection[1]:
+                n = idxs.shape[0]
+                for sidx,eidx in idxs.reshape(n/2, 2):
+                    # sidx, eidx = idxs[0], idxs[1]
+                    sx, ex = x[sidx], x[eidx]
+                    print 'sxex', sx, ex
+                    if sx >= selection[0] and ex <= selection[1]:
 
-                    offset = ys[idxs[0]] - ys[idxs[0] + 1]
-                    fs.append((offset, sidx, eidx, sx, ex))
-                    ys[idxs[0] + 1:idxs[1] + 1] += offset
+                        offset = ys[idxs[0]] - ys[idxs[0] + 1]
+                        fs.append((offset, sidx, eidx, sx, ex))
+                        ys[idxs[0] + 1:idxs[1] + 1] += offset
         else:
             while 1:
                 idxs = where(abs(diff(ys)) >= threshold)[0]
