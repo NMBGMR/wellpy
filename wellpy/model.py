@@ -158,7 +158,7 @@ class WellpyModel(HasTraits):
             self.path = FILE_DEBUG
             if self.load_file(FILE_DEBUG):
                 self.fix_adj_head_data(0.25)
-                self.calculate_depth_to_water()
+                # self.calculate_depth_to_water()
                 # self.save_db()
 
         self.load_qc()
@@ -381,6 +381,10 @@ class WellpyModel(HasTraits):
 
         self.refresh_plot()
 
+    def unfix_adj_head_data(self):
+        ys = self.data_model.get_owater_head()
+        self._plot_adj_head(ys)
+
     def fix_adj_head_data(self, threshold):
         """
         automatically remove offsets and zeros
@@ -390,7 +394,9 @@ class WellpyModel(HasTraits):
         ys = self.data_model.get_water_head()
         ys, zs, fs = self.data_model.fix_data(ys, threshold, self._range_tool.selection)
         self.auto_results = [AutoResult(*fi) for fi in fs]
+        self._plot_adj_head(ys)
 
+    def _plot_adj_head(self, ys):
         self.data_model.set_water_head(ys)
         # plot fixed ranges on raw plot
         # plot = self._plots[WATER_HEAD]

@@ -68,6 +68,8 @@ class ToolboxPane(TraitsDockPane):
     save_png_button = Button('Save PNG')
     save_pdf_button = Button('Save PDF')
 
+    undo_button = Button('Undo')
+
     def _omit_selection_button_fired(self):
         self.model.omit_selection()
 
@@ -95,6 +97,9 @@ class ToolboxPane(TraitsDockPane):
     def _fix_depth_to_water_data_button_fired(self):
         self.model.fix_depth_to_water_data(self.depth_to_water_threshold)
 
+    def _undo_button_fired(self):
+        self.model.unfix_adj_head_data()
+
     # def _smooth_data_button_fired(self):
     #     self.model.smooth_data(self.window, self.method)
 
@@ -107,7 +112,8 @@ class ToolboxPane(TraitsDockPane):
                             show_border=True, label='Manual')
 
         auto_grp = VGroup(HGroup(Item('pane.adj_head_threshold', label='Threshold'),
-                                 UItem('pane.fix_adj_head_data_button')),
+                                 UItem('pane.fix_adj_head_data_button'),
+                                 UItem('pane.undo_button')),
                           show_border=True, label='Adjusted Head')
         # smooth_grp = VGroup(HGroup(UItem('pane.method'), Item('pane.window')),
         #                     UItem('pane.smooth_data_button'),

@@ -53,6 +53,9 @@ class DataModel:
         self.depth_to_water_x = array([])
         self.depth_to_water_y = array([])
 
+    def get_owater_head(self):
+        return array(self._owater_head)
+
     def get_water_head(self):
         return array(self._water_head)
 
@@ -197,6 +200,7 @@ class DataModel:
         # ws = array(ws)
         self.water_temp = array(ts)
         self._water_head = ws
+        self._owater_head = ws
         self.water_head = array(ws)
         self.adjusted_water_head = array(ws)
 
