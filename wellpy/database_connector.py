@@ -44,11 +44,16 @@ testtxt = '''
 <row><PointID>TV-121</PointID><DateMeasured>2014-09-06T00:00:00</DateMeasured><TemperatureWater>12.547</TemperatureWater><WaterHead>6.05887</WaterHead><WaterHeadAdjusted>6.05887</WaterHeadAdjusted><DepthToWaterBGS>120.4311</DepthToWaterBGS><Notes>my note on pointID: TV-121, dteMeasured:9/6/2014 12:00:00 AM </Notes></row>
 </WaterLevelsContinuous_Pressure_Test>
 '''
+
+
 class MockConnection:
     def cursor(self):
         return MockCursor()
 
     def close(self):
+        pass
+
+    def commit(self):
         pass
 
 

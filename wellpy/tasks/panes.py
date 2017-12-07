@@ -70,7 +70,7 @@ class ToolboxPane(TraitsDockPane):
 
     def _omit_selection_button_fired(self):
         self.model.omit_selection()
-        
+
     def _save_pdf_button_fired(self):
         self.model.save_pdf()
 
@@ -95,31 +95,32 @@ class ToolboxPane(TraitsDockPane):
     def _fix_depth_to_water_data_button_fired(self):
         self.model.fix_depth_to_water_data(self.depth_to_water_threshold)
 
-    def _smooth_data_button_fired(self):
-        self.model.smooth_data(self.window, self.method)
+    # def _smooth_data_button_fired(self):
+    #     self.model.smooth_data(self.window, self.method)
 
     def _calculate_button_fired(self):
         self.model.calculate_depth_to_water(self.correct_drift)
 
     def traits_view(self):
-        manual_grp = VGroup(UItem('pane.omit_selection_button'),#Item('pane.constant_offset', label='Constant Offset'),
+        manual_grp = VGroup(UItem('pane.omit_selection_button'),
+                            # Item('pane.constant_offset', label='Constant Offset'),
                             show_border=True, label='Manual')
 
         auto_grp = VGroup(HGroup(Item('pane.adj_head_threshold', label='Threshold'),
                                  UItem('pane.fix_adj_head_data_button')),
                           show_border=True, label='Adjusted Head')
-        smooth_grp = VGroup(HGroup(UItem('pane.method'), Item('pane.window')),
-                            UItem('pane.smooth_data_button'),
-                            show_border=True,
-                            label='Smooth')
+        # smooth_grp = VGroup(HGroup(UItem('pane.method'), Item('pane.window')),
+        #                     UItem('pane.smooth_data_button'),
+        #                     show_border=True,
+        #                     label='Smooth')
 
         calculate_grp = VGroup(HGroup(Item('pane.correct_drift'),
                                       Item('pane.drift_correction_direction'),
                                       UItem('pane.calculate_button')),
                                HGroup(UItem('pane.save_db_button'),
-                                       UItem('pane.save_csv_button'),
-                                       UItem('pane.save_pdf_button'),
-                                       # UItem('pane.save_png_button')
+                                      UItem('pane.save_csv_button'),
+                                      UItem('pane.save_pdf_button'),
+                                      # UItem('pane.save_png_button')
                                       ),
 
                                # HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
@@ -127,9 +128,10 @@ class ToolboxPane(TraitsDockPane):
 
                                label='Depth To Water',
                                show_border=True)
-        v = View(VGroup(
-            manual_grp,
-            auto_grp, smooth_grp, calculate_grp))
+        v = View(VGroup(manual_grp,
+                        auto_grp,
+                        # smooth_grp,
+                        calculate_grp))
         return v
 
 
