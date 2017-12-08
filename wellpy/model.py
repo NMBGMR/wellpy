@@ -656,6 +656,16 @@ class WellpyModel(HasTraits):
         lineplot.active_tool = tool = RangeSelection(lineplot, left_button_selects=True)
         lineplot.overlays.append(RangeSelectionOverlay(component=lineplot))
 
+        z = ZoomTool(component=lineplot,
+                     enable_wheel=False,
+
+                     axis='index',
+                     always_on=False, tool_mode='range',
+                     # max_zoom_out_factor=1,
+                     # max_zoom_in_factor=10000
+                     )
+
+        lineplot.overlays.append(z)
         self._range_tool = tool
         # self._plots[ADJ_WATER_HEAD] = plot
         return plot
