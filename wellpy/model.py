@@ -53,8 +53,8 @@ HEAD_TITLE = 'Head'
 ADJUSTED_HEAD_TITLE = 'Adjusted Head'
 MANUAL_WATER_DEPTH_TITLE = 'Manual Water BGS'
 
-WATER_DEPTH_Y = 'water_depth_y'
-WATER_DEPTH_X = 'water_depth_x'
+MANUAL_WATER_DEPTH_Y = 'manual_water_depth_y'
+MANUAL_WATER_DEPTH_X = 'manual_water_depth_x'
 
 ADJUSTED_WATER_HEAD_Y = 'adjusted_water_head_y'
 ADJUSTED_WATER_HEAD_X = 'adjusted_water_head_x'
@@ -80,7 +80,7 @@ QC_ADJ_WATER_HEAD = 'adjusted_water_head'
 DEPTH_TO_SENSOR = 'depth_to_sensor'
 DEPTH_TO_WATER = 'depth_to_water'
 QC_DEPTH_TO_WATER = 'depth_to_water'
-WATER_LEVEL = 'water_level'
+MANUAL_WATER_LEVEL = 'manual_water_level'
 
 
 class NoSelectionError(BaseException):
@@ -177,6 +177,10 @@ class WellpyModel(HasTraits):
         records = self.db.get_continuous_water_levels(pid.name, qced=0)
         if records:
             self.initialize_plot(qc=True)
+
+            self.plot_manual_measurements(pid.name)
+
+
             """
             PointID, Timestamp, 'head', 'adjusted_head', 'depth_to_water', 'water_temp', note
             """
@@ -239,7 +243,7 @@ class WellpyModel(HasTraits):
         self.qc_point_ids = self.db.get_qc_point_ids()
 
     def omit_selection(self):
-        pt = self._plots[WATER_LEVEL]
+        pt = self._plots[MANUAL_WATER_LEVEL]
         for p in pt.plots.itervalues():
             p = p[0]
             sel = p.index.metadata['selections']
@@ -251,8 +255,8 @@ class WellpyModel(HasTraits):
 
                 p.index.metadata['selections'] = []
 
-                x, y = self.data_model.water_depth_x, self.data_model.water_depth_y
-                self.data_model.water_depth_x, self.data_model.water_depth_y = delete(x, sel), delete(y, sel)
+                x, y = self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y
+                self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y = delete(x, sel), delete(y, sel)
 
         self.refresh_plot()
 
@@ -293,43 +297,37 @@ class WellpyModel(HasTraits):
 
         pid = self.selected_point_id
         if pid is not None:
-            ms = self.db.get_depth_to_water(pid.name)
-            # for mi in ms:
-            #     print mi.
-            # print ms
+            self.plot_manual_measurements(pid.name)
 
-            # def factory(mm):
-            #     sd = SensorDepth()
-            #     return sd
+    def plot_manual_measurements(self, name):
+        ms = self.db.get_depth_to_water(name)
 
-            max_x = self.data_model.x[-1]
-            xs, ys, ss = array(sorted([mi.measurement for mi in ms],
-                                      # reverse=True,
-                                      key=lambda x: x[0])).T
-            xs = asarray(xs, dtype=float)
-            ys = asarray(ys, dtype=float)
+        max_x = self.data_model.x[-1]
+        xs, ys, ss = array(sorted([mi.measurement for mi in ms],
+                                  # reverse=True,
+                                  key=lambda x: x[0])).T
+        xs = asarray(xs, dtype=float)
+        ys = asarray(ys, dtype=float)
 
-            idx = where(xs <= max_x)[0]
-            idx = hstack((idx, idx[-1] + 1))
+        idx = where(xs <= max_x)[0]
+        idx = hstack((idx, idx[-1] + 1))
 
-            xs = xs[idx]
-            ys = ys[idx]
-            ss = ss[idx]
+        xs = xs[idx]
+        ys = ys[idx]
+        ss = ss[idx]
 
-            plot = self._plots[WATER_LEVEL]
-            self.data_model.water_depth_x = xs
-            self.data_model.water_depth_y = ys
-            self.data_model.water_depth_status = ss
+        plot = self._plots[MANUAL_WATER_LEVEL]
+        self.data_model.manual_water_depth_x = xs
+        self.data_model.manual_water_depth_y = ys
+        self.data_model.water_depth_status = ss
 
-            plot.data.set_data(WATER_DEPTH_X, xs)
-            plot.data.set_data(WATER_DEPTH_Y, ys)
+        plot.data.set_data(MANUAL_WATER_DEPTH_X, xs)
+        plot.data.set_data(MANUAL_WATER_DEPTH_Y, ys)
 
-            print 'ss', ss
-            ss = where(asarray(ss, dtype=bool))[0]
-            print 'selection', ss
-            plot.default_index.metadata['selection'] = ss
+        ss = where(asarray(ss, dtype=bool))[0]
+        plot.default_index.metadata['selection'] = ss
 
-            self.refresh_plot()
+        self.refresh_plot()
 
     def calculate_depth_to_water(self, correct_drift=False):
         """
@@ -354,7 +352,7 @@ class WellpyModel(HasTraits):
         xs = self.data_model.x
 
         # ds = self.data_model.depth_to_water
-        ds = column_stack((self.data_model.water_depth_x, self.data_model.water_depth_y))
+        ds = column_stack((self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y))
         print 'ds.shape',ds.shape
         print 'ah.shape', ah.shape
 
@@ -489,7 +487,7 @@ class WellpyModel(HasTraits):
         funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
                  # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
                  (ADJ_WATER_HEAD, self._add_adjusted_water_head),
-                 (WATER_LEVEL, self._add_water_depth),)
+                 (MANUAL_WATER_LEVEL, self._add_manual_water_depth),)
 
         index_range = None
         for i, (k, f) in enumerate(funcs):
@@ -517,6 +515,7 @@ class WellpyModel(HasTraits):
             plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, [1, 2, 3])
             plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, [30, 20, 10])
             plot.plot((QC_ADJUSTED_WATER_HEAD_X, QC_ADJUSTED_WATER_HEAD_Y), linecolor='red')
+
         # plot = self._add_water_depth(padding)
         # plot.index_range = index_range
         # container.add(plot)
@@ -608,34 +607,34 @@ class WellpyModel(HasTraits):
 
         return plot
 
-    def _add_depth_to_sensor(self, padding, *args, **kw):
-        pd = self._plot_data((DEPTH_SENSOR_X, []),
-                             (DEPTH_SENSOR_Y, []))
+    # def _add_depth_to_sensor(self, padding, *args, **kw):
+    #     pd = self._plot_data((DEPTH_SENSOR_X, []),
+    #                          (DEPTH_SENSOR_Y, []))
+    #
+    #     plot = Plot(data=pd, padding=padding, origin='top left')
+    #     plot.y_axis.title = SENSOR_TITLE
+    #
+    #     plot.plot((DEPTH_SENSOR_X, DEPTH_SENSOR_Y))[0]
+    #
+    #     return plot
 
-        plot = Plot(data=pd, padding=padding, origin='top left')
-        plot.y_axis.title = SENSOR_TITLE
-
-        plot.plot((DEPTH_SENSOR_X, DEPTH_SENSOR_Y))[0]
-
-        return plot
-
-    def _add_water_head(self, padding, *args, **kw):
-
-        data = self.data_model
-        pd = self._plot_data((WATER_HEAD_X, data.x),
-                             (WATER_HEAD_Y, data.water_head))
-
-        plot = Plot(data=pd, padding=padding)
-        plot.y_axis.title = HEAD_TITLE
-
-        plot.plot((WATER_HEAD_X, WATER_HEAD_Y))[0]
-        # plot.x_axis.visible = False
-        # add overlays
-        o = RangeOverlay(plot=plot)
-        plot.auto_fixed_range_overlay = o
-        plot.overlays.append(o)
-        # self._plots[WATER_HEAD] = plot
-        return plot
+    # def _add_water_head(self, padding, *args, **kw):
+    #
+    #     data = self.data_model
+    #     pd = self._plot_data((WATER_HEAD_X, data.x),
+    #                          (WATER_HEAD_Y, data.water_head))
+    #
+    #     plot = Plot(data=pd, padding=padding)
+    #     plot.y_axis.title = HEAD_TITLE
+    #
+    #     plot.plot((WATER_HEAD_X, WATER_HEAD_Y))[0]
+    #     # plot.x_axis.visible = False
+    #     # add overlays
+    #     o = RangeOverlay(plot=plot)
+    #     plot.auto_fixed_range_overlay = o
+    #     plot.overlays.append(o)
+    #     # self._plots[WATER_HEAD] = plot
+    #     return plot
 
     def _add_adjusted_water_head(self, padding, *args, **kw):
         data = self.data_model
@@ -670,21 +669,21 @@ class WellpyModel(HasTraits):
         # self._plots[ADJ_WATER_HEAD] = plot
         return plot
 
-    def _add_water_depth(self, padding, *args, **kw):
+    def _add_manual_water_depth(self, padding, *args, **kw):
         if self.data_model:
-            x = self.data_model.water_depth_x
-            y = self.data_model.water_depth_y
+            x = self.data_model.manual_water_depth_x
+            y = self.data_model.manual_water_depth_y
         else:
             x, y = [], []
 
         # plot, line, scatter = self._add_line_scatter('', 'Manual BGS', padding, x=x)
-        pd = self._plot_data((WATER_DEPTH_X, x),
-                             (WATER_DEPTH_Y, y))
+        pd = self._plot_data((MANUAL_WATER_DEPTH_X, x),
+                             (MANUAL_WATER_DEPTH_Y, y))
         plot = Plot(data=pd, padding=padding, origin='top left')
 
         plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
-        plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y))
-        p = plot.plot((WATER_DEPTH_X, WATER_DEPTH_Y), type='scatter',
+        plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y))
+        p = plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y), type='scatter',
                       marker='circle', marker_size=2.5)[0]
         si = ScatterInspector(component=p)
         p.tools.append(si)
