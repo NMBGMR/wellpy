@@ -592,7 +592,7 @@ class WellpyModel(HasTraits):
         pd = self._plot_data((DEPTH_X, []),
                              (DEPTH_Y, []))
 
-        plot = Plot(data=pd, padding=padding, origin='top left')
+        plot = Plot(data=pd, padding=padding)
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
         line = plot.plot((DEPTH_X, DEPTH_Y))[0]
 
