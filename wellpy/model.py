@@ -178,8 +178,6 @@ class WellpyModel(HasTraits):
         if records:
             self.initialize_plot(qc=True)
 
-            self.plot_manual_measurements(pid.name)
-
 
             """
             PointID, Timestamp, 'head', 'adjusted_head', 'depth_to_water', 'water_temp', note
@@ -208,6 +206,9 @@ class WellpyModel(HasTraits):
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, xs)
             plot.data.set_data(DEPTH_Y, ds)
+
+            self.data_model.x = array(xs)
+            self.plot_manual_measurements(pid.name)
 
             qced_records = self.db.get_continuous_water_levels(pid.name, qced=1)
             if qced_records:
@@ -302,7 +303,7 @@ class WellpyModel(HasTraits):
     def plot_manual_measurements(self, name):
         ms = self.db.get_depth_to_water(name)
 
-        max_x = self.data_model.x[-1]
+        # max_x = self.data_model.x[-1]
         xs, ys, ss = array(sorted([mi.measurement for mi in ms],
                                   # reverse=True,
                                   key=lambda x: x[0])).T
