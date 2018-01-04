@@ -199,10 +199,10 @@ class WellpyModel(HasTraits):
                 ds[i] = float(ri[5])
                 wts[i] = float(ri[2])
 
-            plot = self._plots[ADJ_WATER_HEAD]
-
-            plot.data.set_data(ADJUSTED_WATER_HEAD_X, xs)
-            plot.data.set_data(ADJUSTED_WATER_HEAD_Y, ahs)
+            # plot = self._plots[ADJ_WATER_HEAD]
+            #
+            # plot.data.set_data(ADJUSTED_WATER_HEAD_X, xs)
+            # plot.data.set_data(ADJUSTED_WATER_HEAD_Y, ahs)
 
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, xs)
@@ -211,7 +211,7 @@ class WellpyModel(HasTraits):
             self.data_model.x = array(xs)
 
             xs, ys, ss = self.get_manual_measurements(pid.name)
-            plot = self._plots[DEPTH_TO_WATER]
+            # plot = self._plots[DEPTH_TO_WATER]
             plot.set_data(QC_MANUAL_X, xs)
             plot.set_data(QC_MANUAL_Y, ys)
             plot.plot((QC_MANUAL_X, QC_MANUAL_Y), type='scatter')
@@ -368,8 +368,6 @@ class WellpyModel(HasTraits):
 
         # ds = self.data_model.depth_to_water
         ds = column_stack((self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y))
-        print 'ds.shape', ds.shape
-        print 'ah.shape', ah.shape
 
         dd = zeros_like(ah)
         ddd = zeros_like(ah)
