@@ -214,7 +214,7 @@ class WellpyModel(HasTraits):
             # plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(QC_MANUAL_X, xs)
             plot.data.set_data(QC_MANUAL_Y, ys)
-            plot.plot((QC_MANUAL_X, QC_MANUAL_Y), type='scatter')
+            plot.plot((QC_MANUAL_X, QC_MANUAL_Y), type='scatter', color='yellow')
             # self.plot_manual_measurements(pid.name)
 
             # qced_records = self.db.get_continuous_water_levels(pid.name, qced=1)
