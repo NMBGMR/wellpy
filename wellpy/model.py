@@ -500,9 +500,9 @@ class WellpyModel(HasTraits):
         padding = [70, 10, 5, 5]
 
         if qc:
-            funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
+            funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),)
                      # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
-                     (WATER_HEAD, self._add_water_head))
+                     # (WATER_HEAD, self._add_water_head))
         else:
             funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
                      # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
