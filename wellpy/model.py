@@ -212,8 +212,8 @@ class WellpyModel(HasTraits):
 
             xs, ys, ss = self.get_manual_measurements(pid.name)
             # plot = self._plots[DEPTH_TO_WATER]
-            plot.set_data(QC_MANUAL_X, xs)
-            plot.set_data(QC_MANUAL_Y, ys)
+            plot.data.set_data(QC_MANUAL_X, xs)
+            plot.data.set_data(QC_MANUAL_Y, ys)
             plot.plot((QC_MANUAL_X, QC_MANUAL_Y), type='scatter')
             # self.plot_manual_measurements(pid.name)
 
