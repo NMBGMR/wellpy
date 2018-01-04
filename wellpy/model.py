@@ -193,8 +193,8 @@ class WellpyModel(HasTraits):
                 # h = float(ri[2])
                 xs[i] = x
                 # hs[i] = h
-                ahs[i] = float(ri[3])
-                ds[i] = float(ri[4])
+                ahs[i] = float(ri[4])
+                ds[i] = float(ri[5])
                 # wt = float(ri[5])
 
             plot = self._plots[ADJ_WATER_HEAD]
