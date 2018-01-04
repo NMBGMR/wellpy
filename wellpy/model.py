@@ -193,8 +193,7 @@ class WellpyModel(HasTraits):
                 # h = float(ri[2])
                 xs[i] = x
                 # hs[i] = h
-                ah = float(ri[3])
-                ahs[i] = ah
+                ahs[i] = float(ri[3])
                 ds[i] = float(ri[4])
                 # wt = float(ri[5])
 
@@ -303,7 +302,7 @@ class WellpyModel(HasTraits):
     def plot_manual_measurements(self, name):
         ms = self.db.get_depth_to_water(name)
 
-        # max_x = self.data_model.x[-1]
+        max_x = self.data_model.x[-1]
         xs, ys, ss = array(sorted([mi.measurement for mi in ms],
                                   # reverse=True,
                                   key=lambda x: x[0])).T
