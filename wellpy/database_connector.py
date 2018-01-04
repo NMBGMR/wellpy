@@ -25,6 +25,8 @@ from apptools.preferences.preference_binding import bind_preference
 from pyface.progress_dialog import ProgressDialog
 from traits.api import HasTraits, Str, UUID, Float
 
+from wellpy.config import config
+
 testtxt = '''
 <?xml version="1.0" encoding="utf-16" standalone="yes"?>
 <WaterLevelsContinuous_Pressure_Test>
@@ -180,6 +182,8 @@ class DatabaseConnector(HasTraits):
         :return:
         """
         existing_nresults = len(self.get_continuous_water_levels(pointid))
+
+        user = config.user
 
         with self._get_cursor() as cursor:
             cmd = 'InsertWLCPressurePython_NEW_wUpdate %s, %s, %d, %d, %d, %d, %s'
