@@ -23,6 +23,7 @@ from chaco.plot_graphics_context import PlotGraphicsContext
 from chaco.tools.api import ZoomTool
 from chaco.array_plot_data import ArrayPlotData
 from chaco.plot import Plot
+from chaco.tools.lasso_selection import LassoSelection
 from chaco.tools.pan_tool2 import PanTool
 from chaco.tools.range_selection import RangeSelection
 from chaco.tools.range_selection_overlay import RangeSelectionOverlay
@@ -214,7 +215,9 @@ class WellpyModel(HasTraits):
             # plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(QC_MANUAL_X, xs)
             plot.data.set_data(QC_MANUAL_Y, ys)
-            plot.plot((QC_MANUAL_X, QC_MANUAL_Y), type='scatter', color='yellow')
+            plot.plot((QC_MANUAL_X, QC_MANUAL_Y),
+                      marker='circle', marker_size=2.5,
+                      type='scatter', color='yellow')
             # self.plot_manual_measurements(pid.name)
 
             # qced_records = self.db.get_continuous_water_levels(pid.name, qced=1)
@@ -620,18 +623,13 @@ class WellpyModel(HasTraits):
 
         z = ZoomTool(component=line,
                      enable_wheel=True,
-
+                     alpha=0.3,
                      axis='index',
                      always_on=False, tool_mode='range',
                      max_zoom_out_factor=1,
                      max_zoom_in_factor=10000)
 
         line.overlays.append(z)
-
-        # rt = RangeSelection(plot=line, component=li)
-        # rto = RangeSelectionOverlay(component=line, tool=rt)
-        # line.tools.append(rt)
-        # line.overlays.append(rto)
 
         return plot
 
@@ -706,6 +704,10 @@ class WellpyModel(HasTraits):
                       marker='circle', marker_size=2.5)[0]
         si = ScatterInspector(component=p)
         p.tools.append(si)
+
+        p.active_tool = tool = RangeSelection(p, left_button_selects=True)
+        p.tools.append(tool)
+        p.overlays.append(RangeSelectionOverlay(component=p))
         # ss = where(asarray(sel, dtype=bool))[0]
         # print ss
         # sp.index.metadata['selection'] = ss
