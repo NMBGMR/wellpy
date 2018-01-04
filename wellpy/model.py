@@ -41,7 +41,7 @@ from chaco.scales_tick_generator import ScalesTickGenerator
 from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
     ones_like, zeros, delete
 
-from globals import DATABSE_DEBUG, FILE_DEBUG, QC_DEBUG
+from globals import DATABSE_DEBUG, FILE_DEBUG, QC_DEBUG, DEBUG
 from wellpy.data_model import DataModel
 from wellpy.database_connector import DatabaseConnector, PointIDRecord
 from wellpy.fuzzyfinder import fuzzyfinder
@@ -164,6 +164,9 @@ class WellpyModel(HasTraits):
                 # self.calculate_depth_to_water()
                 # self.save_db()
 
+        if DEBUG:
+            self.point_id_entry = 'MG-038'
+
         self.load_qc()
 
     def apply_qc(self):
@@ -255,23 +258,26 @@ class WellpyModel(HasTraits):
 
     def omit_selection(self):
         pt = self._plots[MANUAL_WATER_LEVEL]
-        for p in pt.plots.itervalues():
-            p = p[0]
-            sel = p.index.metadata['selections']
-            print p, sel
-            if sel:
-                x = p.index.get_data()
-                y = p.value.get_data()
-                p.index.set_data(delete(x, sel))
-                p.value.set_data(delete(y, sel))
+        scatterplot = pt.plots['plot1'][0]
+        sel = scatterplot.index.metadata['selections']
+        if sel:
+            low, high = sel
 
-                p.index.metadata['selections'] = []
+            # for p in (lineplot, scatterplot):
+            xs = scatterplot.index.get_data()
+            ys = scatterplot.value.get_data()
 
-                x, y = self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y
-                self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y = delete(x, sel), delete(y,
-                                                                                                                    sel)
+            mask = where(logical_and(xs >= low, xs <= high))[0]
 
-        self.refresh_plot()
+            scatterplot.index.set_data(delete(xs, mask))
+            scatterplot.value.set_data(delete(ys, mask))
+            scatterplot.index.metadata['selections'] = []
+
+            x, y = self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y
+            self.data_model.manual_water_depth_x = delete(x, mask)
+            self.data_model.manual_water_depth_y = delete(y, mask)
+
+            self.refresh_plot()
 
     def save_png(self):
         information(None, 'Save as png not enabled')
@@ -503,8 +509,8 @@ class WellpyModel(HasTraits):
 
         if qc:
             funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),)
-                     # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
-                     # (WATER_HEAD, self._add_water_head))
+            # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
+            # (WATER_HEAD, self._add_water_head))
         else:
             funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
                      # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
@@ -682,7 +688,6 @@ class WellpyModel(HasTraits):
         lineplot.active_tool = tool = RangeSelection(lineplot, left_button_selects=True)
         lineplot.overlays.append(RangeSelectionOverlay(component=lineplot))
 
-
         self._range_tool = tool
         # self._plots[ADJ_WATER_HEAD] = plot
         return plot
@@ -704,15 +709,10 @@ class WellpyModel(HasTraits):
 
         p = plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y), type='scatter',
                       marker='circle', marker_size=2.5)[0]
-        si = ScatterInspector(component=p)
-        p.tools.append(si)
 
-        # tool = RangeSelection(p, left_button_selects=True)
-        # p.tools.append(tool)
-        # p.overlays.append(RangeSelectionOverlay(component=p))
-        # ss = where(asarray(sel, dtype=bool))[0]
-        # print ss
-        # sp.index.metadata['selection'] = ss
+        tool = RangeSelection(p, left_button_selects=True)
+        p.tools.append(tool)
+        p.overlays.append(RangeSelectionOverlay(component=p))
 
         return plot
 
