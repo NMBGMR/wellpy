@@ -59,8 +59,8 @@ MANUAL_WATER_DEPTH_X = 'manual_water_depth_x'
 ADJUSTED_WATER_HEAD_Y = 'adjusted_water_head_y'
 ADJUSTED_WATER_HEAD_X = 'adjusted_water_head_x'
 
-QC_ADJUSTED_WATER_HEAD_Y = 'adjusted_water_head_y'
-QC_ADJUSTED_WATER_HEAD_X = 'adjusted_water_head_x'
+QC_ADJUSTED_WATER_HEAD_Y = 'qc_adjusted_water_head_y'
+QC_ADJUSTED_WATER_HEAD_X = 'qc_adjusted_water_head_x'
 
 WATER_HEAD_Y = 'water_head_y'
 WATER_HEAD_X = 'water_head_x'
@@ -76,7 +76,7 @@ QC_DEPTH_X = 'depth_x'
 
 WATER_HEAD = 'water_head'
 ADJ_WATER_HEAD = 'adjusted_water_head'
-QC_ADJ_WATER_HEAD = 'adjusted_water_head'
+QC_ADJ_WATER_HEAD = 'qc_adjusted_water_head'
 DEPTH_TO_SENSOR = 'depth_to_sensor'
 DEPTH_TO_WATER = 'depth_to_water'
 QC_DEPTH_TO_WATER = 'depth_to_water'
@@ -209,33 +209,33 @@ class WellpyModel(HasTraits):
             self.data_model.x = array(xs)
             self.plot_manual_measurements(pid.name)
 
-            qced_records = self.db.get_continuous_water_levels(pid.name, qced=1)
-            if qced_records:
-
-                plot = self._plots[QC_ADJ_WATER_HEAD]
-
-                xs = zeros(n)
-                # hs = zeros(n)
-                ahs = zeros(n)
-                ds = zeros(n)
-                for i, ri in enumerate(sorted(qced_records, key=lambda x: x[1])):
-                    x = time.mktime(ri[1].timetuple())
-                    # h = float(ri[2])
-                    xs[i] = x
-                    # hs[i] = h
-                    ah = float(ri[3])
-                    ahs[i] = ah
-                    ds[i] = float(ri[4])
-                    # wt = float(ri[5])
-
-                plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, xs)
-                plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, ahs)
-
-                plot = self._plots[QC_DEPTH_TO_WATER]
-                plot.data.set_data(QC_DEPTH_X, xs)
-                plot.data.set_data(QC_DEPTH_Y, ds)
-
-            self.refresh_plot()
+            # qced_records = self.db.get_continuous_water_levels(pid.name, qced=1)
+            # if qced_records:
+            #
+            #     plot = self._plots[QC_ADJ_WATER_HEAD]
+            #
+            #     xs = zeros(n)
+            #     # hs = zeros(n)
+            #     ahs = zeros(n)
+            #     ds = zeros(n)
+            #     for i, ri in enumerate(sorted(qced_records, key=lambda x: x[1])):
+            #         x = time.mktime(ri[1].timetuple())
+            #         # h = float(ri[2])
+            #         xs[i] = x
+            #         # hs[i] = h
+            #         ah = float(ri[3])
+            #         ahs[i] = ah
+            #         ds[i] = float(ri[4])
+            #         # wt = float(ri[5])
+            #
+            #     plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, xs)
+            #     plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, ahs)
+            #
+            #     plot = self._plots[QC_DEPTH_TO_WATER]
+            #     plot.data.set_data(QC_DEPTH_X, xs)
+            #     plot.data.set_data(QC_DEPTH_Y, ds)
+            #
+            # self.refresh_plot()
         else:
             information('No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
 
