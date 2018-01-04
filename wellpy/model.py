@@ -511,7 +511,7 @@ class WellpyModel(HasTraits):
             # plot.data.set_data(QC_DEPTH_Y, [10, 20, 30])
             # plot.plot((QC_DEPTH_X, QC_DEPTH_Y), linecolor='red')
 
-            plot = self._plots[QC_ADJ_WATER_HEAD]
+            # plot = self._plots[QC_ADJ_WATER_HEAD]
             # plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, [1, 2, 3])
             # plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, [30, 20, 10])
             # plot.plot((QC_ADJUSTED_WATER_HEAD_X, QC_ADJUSTED_WATER_HEAD_Y), linecolor='red')
