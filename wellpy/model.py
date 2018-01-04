@@ -61,6 +61,8 @@ ADJUSTED_WATER_HEAD_X = 'adjusted_water_head_x'
 
 QC_ADJUSTED_WATER_HEAD_Y = 'qc_adjusted_water_head_y'
 QC_ADJUSTED_WATER_HEAD_X = 'qc_adjusted_water_head_x'
+QC_MANUAL_X = 'qc_manual_x'
+QC_MANUAL_Y = 'qc_manual_y'
 
 WATER_HEAD_Y = 'water_head_y'
 WATER_HEAD_X = 'water_head_x'
@@ -178,24 +180,24 @@ class WellpyModel(HasTraits):
         if records:
             self.initialize_plot(qc=True)
 
-
             """
-            PointID, Timestamp, 'head', 'adjusted_head', 'depth_to_water', 'water_temp', note
+            PointID, Timestamp, 'temp', 'head', 'adjusted_head', 'depth_to_water'', note
             """
             n = len(records)
 
             xs = zeros(n)
-            # hs = zeros(n)
+            hs = zeros(n)
             ahs = zeros(n)
             ds = zeros(n)
+            wts = zeros(n)
             for i, ri in enumerate(sorted(records, key=lambda x: x[1])):
                 x = time.mktime(ri[1].timetuple())
                 # h = float(ri[2])
                 xs[i] = x
-                # hs[i] = h
+                hs[i] = float(ri[3])
                 ahs[i] = float(ri[4])
                 ds[i] = float(ri[5])
-                # wt = float(ri[5])
+                wts[i] = float(ri[2])
 
             plot = self._plots[ADJ_WATER_HEAD]
 
@@ -207,7 +209,13 @@ class WellpyModel(HasTraits):
             plot.data.set_data(DEPTH_Y, ds)
 
             self.data_model.x = array(xs)
-            self.plot_manual_measurements(pid.name)
+
+            xs, ys, ss = self.get_manual_measurements(pid.name)
+            plot = self._plots[DEPTH_TO_WATER]
+            plot.set_data(QC_MANUAL_X, xs)
+            plot.set_data(QC_MANUAL_Y, ys)
+            plot.plot((QC_MANUAL_X, QC_MANUAL_Y), type='scatter')
+            # self.plot_manual_measurements(pid.name)
 
             # qced_records = self.db.get_continuous_water_levels(pid.name, qced=1)
             # if qced_records:
@@ -235,7 +243,7 @@ class WellpyModel(HasTraits):
             #     plot.data.set_data(QC_DEPTH_X, xs)
             #     plot.data.set_data(QC_DEPTH_Y, ds)
             #
-            # self.refresh_plot()
+            self.refresh_plot()
         else:
             information('No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
 
@@ -256,7 +264,8 @@ class WellpyModel(HasTraits):
                 p.index.metadata['selections'] = []
 
                 x, y = self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y
-                self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y = delete(x, sel), delete(y, sel)
+                self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y = delete(x, sel), delete(y,
+                                                                                                                    sel)
 
         self.refresh_plot()
 
@@ -299,16 +308,22 @@ class WellpyModel(HasTraits):
         if pid is not None:
             self.plot_manual_measurements(pid.name)
 
-    def plot_manual_measurements(self, name):
+    def get_manual_measurements(self, name):
         ms = self.db.get_depth_to_water(name)
 
-        max_x = self.data_model.x[-1]
         xs, ys, ss = array(sorted([mi.measurement for mi in ms],
                                   # reverse=True,
                                   key=lambda x: x[0])).T
         xs = asarray(xs, dtype=float)
         ys = asarray(ys, dtype=float)
+        ss = asarray(ss, dtype=bool)
+        return xs, ys, ss
 
+    def plot_manual_measurements(self, name):
+
+        xs, ys, ss = self.get_manual_measurements(name)
+
+        max_x = self.data_model.x[-1]
         idx = where(xs <= max_x)[0]
         idx = hstack((idx, idx[-1] + 1))
 
@@ -353,7 +368,7 @@ class WellpyModel(HasTraits):
 
         # ds = self.data_model.depth_to_water
         ds = column_stack((self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y))
-        print 'ds.shape',ds.shape
+        print 'ds.shape', ds.shape
         print 'ah.shape', ah.shape
 
         dd = zeros_like(ah)
@@ -474,9 +489,9 @@ class WellpyModel(HasTraits):
 
         self.retrieve_depth_to_water()
         return True
-            # else:
-            #     warning(None, 'Could not automatically retrieve depth water. Please manually select a Point ID from the '
-            #                   '"Site" pane')
+        # else:
+        #     warning(None, 'Could not automatically retrieve depth water. Please manually select a Point ID from the '
+        #                   '"Site" pane')
 
     def initialize_plot(self, qc=False):
         self.plot_container = container = self._new_plotcontainer()
@@ -484,10 +499,15 @@ class WellpyModel(HasTraits):
 
         padding = [70, 10, 5, 5]
 
-        funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
-                 # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
-                 (ADJ_WATER_HEAD, self._add_adjusted_water_head),
-                 (MANUAL_WATER_LEVEL, self._add_manual_water_depth),)
+        if qc:
+            funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
+                     # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
+                     (WATER_HEAD, self._add_water_head))
+        else:
+            funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
+                     # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
+                     (ADJ_WATER_HEAD, self._add_adjusted_water_head),
+                     (MANUAL_WATER_LEVEL, self._add_manual_water_depth),)
 
         index_range = None
         for i, (k, f) in enumerate(funcs):
@@ -505,16 +525,16 @@ class WellpyModel(HasTraits):
             container.add(plot)
             self._plots[k] = plot
 
-        if qc:
-            plot = self._plots[DEPTH_TO_WATER]
-            # plot.data.set_data(QC_DEPTH_X, [1, 2, 3])
-            # plot.data.set_data(QC_DEPTH_Y, [10, 20, 30])
-            # plot.plot((QC_DEPTH_X, QC_DEPTH_Y), linecolor='red')
+        # if qc:
+        #     plot = self._plots[DEPTH_TO_WATER]
+        # plot.data.set_data(QC_DEPTH_X, [1, 2, 3])
+        # plot.data.set_data(QC_DEPTH_Y, [10, 20, 30])
+        # plot.plot((QC_DEPTH_X, QC_DEPTH_Y), linecolor='red')
 
-            # plot = self._plots[QC_ADJ_WATER_HEAD]
-            # plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, [1, 2, 3])
-            # plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, [30, 20, 10])
-            # plot.plot((QC_ADJUSTED_WATER_HEAD_X, QC_ADJUSTED_WATER_HEAD_Y), linecolor='red')
+        # plot = self._plots[QC_ADJ_WATER_HEAD]
+        # plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, [1, 2, 3])
+        # plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, [30, 20, 10])
+        # plot.plot((QC_ADJUSTED_WATER_HEAD_X, QC_ADJUSTED_WATER_HEAD_Y), linecolor='red')
 
         # plot = self._add_water_depth(padding)
         # plot.index_range = index_range
