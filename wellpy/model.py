@@ -208,7 +208,7 @@ class WellpyModel(HasTraits):
             plot.data.set_data(DEPTH_X, xs)
             plot.data.set_data(DEPTH_Y, ds)
 
-            self.data_model.x = array(xs)
+            # self.data_model.x = array(xs)
 
             xs, ys, ss = self.get_manual_measurements(pid.name)
             # plot = self._plots[DEPTH_TO_WATER]
