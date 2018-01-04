@@ -245,7 +245,7 @@ class WellpyModel(HasTraits):
             #
             self.refresh_plot()
         else:
-            information('No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
+            information(None, 'No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
 
     def load_qc(self):
         self.qc_point_ids = self.db.get_qc_point_ids()
