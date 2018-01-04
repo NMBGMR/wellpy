@@ -258,6 +258,7 @@ class WellpyModel(HasTraits):
         for p in pt.plots.itervalues():
             p = p[0]
             sel = p.index.metadata['selections']
+            print p, sel
             if sel:
                 x = p.index.get_data()
                 y = p.value.get_data()
@@ -700,14 +701,15 @@ class WellpyModel(HasTraits):
 
         plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
         plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y))
+
         p = plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y), type='scatter',
                       marker='circle', marker_size=2.5)[0]
         si = ScatterInspector(component=p)
         p.tools.append(si)
 
-        p.active_tool = tool = RangeSelection(p, left_button_selects=True)
-        p.tools.append(tool)
-        p.overlays.append(RangeSelectionOverlay(component=p))
+        # tool = RangeSelection(p, left_button_selects=True)
+        # p.tools.append(tool)
+        # p.overlays.append(RangeSelectionOverlay(component=p))
         # ss = where(asarray(sel, dtype=bool))[0]
         # print ss
         # sp.index.metadata['selection'] = ss
