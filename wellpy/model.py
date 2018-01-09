@@ -14,39 +14,34 @@
 # limitations under the License.
 # ===============================================================================
 import os
-from plistlib import Data
 import time
+from datetime import datetime
+from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
+    ones_like, zeros, delete
+
 from chaco.axis import PlotAxis
 from chaco.pdf_graphics_context import PdfPlotGraphicsContext
 from chaco.plot_containers import VPlotContainer
-from chaco.plot_graphics_context import PlotGraphicsContext
 from chaco.tools.api import ZoomTool
 from chaco.array_plot_data import ArrayPlotData
 from chaco.plot import Plot
-from chaco.tools.lasso_selection import LassoSelection
-from chaco.tools.pan_tool2 import PanTool
 from chaco.tools.range_selection import RangeSelection
 from chaco.tools.range_selection_overlay import RangeSelectionOverlay
-from datetime import datetime
+from chaco.scales.api import CalendarScaleSystem
+from chaco.scales_tick_generator import ScalesTickGenerator
 
-from chaco.tools.scatter_inspector import ScatterInspector
-from chaco.tools.select_tool import SelectTool
 from pyface.confirmation_dialog import confirm
 from pyface.constant import YES
 from pyface.file_dialog import FileDialog
 from pyface.message_dialog import information, warning
 from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int, Any
-from chaco.scales.api import CalendarScaleSystem
-from chaco.scales_tick_generator import ScalesTickGenerator
-from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
-    ones_like, zeros, delete
 
-from globals import DATABSE_DEBUG, FILE_DEBUG, QC_DEBUG, DEBUG
 from wellpy.data_model import DataModel
 from wellpy.database_connector import DatabaseConnector, PointIDRecord
 from wellpy.fuzzyfinder import fuzzyfinder
-from wellpy.range_overlay import RangeOverlay
 from wellpy.tools import DataTool, DataToolOverlay
+
+from globals import DATABSE_DEBUG, FILE_DEBUG, QC_DEBUG, DEBUG
 
 DEPTH_TO_WATER_TITLE = 'Depth To Water'
 SENSOR_TITLE = 'Sensor BGS'
@@ -170,9 +165,6 @@ class WellpyModel(HasTraits):
         self.load_qc()
 
     def apply_qc(self):
-        # information(None, 'QC Not yet implemented')
-        # return
-
         self._save_db(with_qc=True)
 
     def load_qc_data(self):
@@ -196,59 +188,24 @@ class WellpyModel(HasTraits):
             wts = zeros(n)
             for i, ri in enumerate(sorted(records, key=lambda x: x[1])):
                 x = time.mktime(ri[1].timetuple())
-                # h = float(ri[2])
                 xs[i] = x
+                wts[i] = float(ri[2])
                 hs[i] = float(ri[3])
                 ahs[i] = float(ri[4])
                 ds[i] = float(ri[5])
-                wts[i] = float(ri[2])
-
-            # plot = self._plots[ADJ_WATER_HEAD]
-            #
-            # plot.data.set_data(ADJUSTED_WATER_HEAD_X, xs)
-            # plot.data.set_data(ADJUSTED_WATER_HEAD_Y, ahs)
 
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, xs)
             plot.data.set_data(DEPTH_Y, ds)
 
-            # self.data_model.x = array(xs)
-
             xs, ys, ss = self.get_manual_measurements(pid.name)
-            # plot = self._plots[DEPTH_TO_WATER]
+
             plot.data.set_data(QC_MANUAL_X, xs)
             plot.data.set_data(QC_MANUAL_Y, ys)
             plot.plot((QC_MANUAL_X, QC_MANUAL_Y),
                       marker='circle', marker_size=2.5,
                       type='scatter', color='yellow')
-            # self.plot_manual_measurements(pid.name)
 
-            # qced_records = self.db.get_continuous_water_levels(pid.name, qced=1)
-            # if qced_records:
-            #
-            #     plot = self._plots[QC_ADJ_WATER_HEAD]
-            #
-            #     xs = zeros(n)
-            #     # hs = zeros(n)
-            #     ahs = zeros(n)
-            #     ds = zeros(n)
-            #     for i, ri in enumerate(sorted(qced_records, key=lambda x: x[1])):
-            #         x = time.mktime(ri[1].timetuple())
-            #         # h = float(ri[2])
-            #         xs[i] = x
-            #         # hs[i] = h
-            #         ah = float(ri[3])
-            #         ahs[i] = ah
-            #         ds[i] = float(ri[4])
-            #         # wt = float(ri[5])
-            #
-            #     plot.data.set_data(QC_ADJUSTED_WATER_HEAD_X, xs)
-            #     plot.data.set_data(QC_ADJUSTED_WATER_HEAD_Y, ahs)
-            #
-            #     plot = self._plots[QC_DEPTH_TO_WATER]
-            #     plot.data.set_data(QC_DEPTH_X, xs)
-            #     plot.data.set_data(QC_DEPTH_Y, ds)
-            #
             self.refresh_plot()
         else:
             information(None, 'No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
@@ -376,8 +333,11 @@ class WellpyModel(HasTraits):
         ah = self.data_model.adjusted_water_head
         xs = self.data_model.x
 
-        # ds = self.data_model.depth_to_water
-        ds = column_stack((self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y))
+        mxs = self.data_model.manual_water_depth_x
+        mys = self.data_model.manual_water_depth_y
+        mss = self.data_model.water_depth_status
+
+        ds = column_stack((mxs, mys))
 
         dd = zeros_like(ah)
         ddd = zeros_like(ah)
@@ -390,8 +350,13 @@ class WellpyModel(HasTraits):
                 ddd[mask] = l
 
         plot = self._plots[DEPTH_TO_WATER]
+
         plot.data.set_data(DEPTH_X, xs)
         plot.data.set_data(DEPTH_Y, dd)
+
+        plot.data.set_data(MANUAL_WATER_DEPTH_X, mxs)
+        plot.data.set_data(MANUAL_WATER_DEPTH_Y, mys)
+        plot.default_index.metadata['selection'] = mss
 
         # plot = self._plots[DEPTH_TO_SENSOR]
         # plot.data.set_data(DEPTH_SENSOR_X, xs)
@@ -621,6 +586,11 @@ class WellpyModel(HasTraits):
 
         plot = Plot(data=pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
+
+        plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y),
+                  marker='circle', marker_size=2.5,
+                  type='scatter', color='yellow')
+
         line = plot.plot((DEPTH_X, DEPTH_Y))[0]
 
         dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
