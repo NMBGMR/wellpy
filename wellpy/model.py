@@ -213,7 +213,7 @@ class WellpyModel(HasTraits):
     def load_qc(self):
         self.qc_point_ids = self.db.get_qc_point_ids()
 
-    def omit_selection(self):
+    def get_selection(self):
         pt = self._plots[MANUAL_WATER_LEVEL]
         scatterplot = pt.plots['plot1'][0]
         sel = scatterplot.index.metadata['selections']
@@ -222,10 +222,18 @@ class WellpyModel(HasTraits):
 
             # for p in (lineplot, scatterplot):
             xs = scatterplot.index.get_data()
-            ys = scatterplot.value.get_data()
 
             mask = where(logical_and(xs >= low, xs <= high))[0]
+            return mask
 
+    def omit_selection(self):
+        pt = self._plots[MANUAL_WATER_LEVEL]
+        scatterplot = pt.plots['plot1'][0]
+
+        mask = self.get_selection()
+        if mask is not None:
+            xs = scatterplot.index.get_data()
+            ys = scatterplot.value.get_data()
             scatterplot.index.set_data(delete(xs, mask))
             scatterplot.value.set_data(delete(ys, mask))
             scatterplot.index.metadata['selections'] = []
@@ -311,7 +319,20 @@ class WellpyModel(HasTraits):
 
         self.refresh_plot()
 
-    def calculate_depth_to_water(self, correct_drift=False):
+    def snap(self):
+
+        sel = self.get_selection()
+        if sel:
+            idx = sel[0]
+            pt = self._plots[MANUAL_WATER_LEVEL]
+
+            scatterplot = pt.plots['plot1'][0]
+            ys = scatterplot.value.get_data()
+
+            v = ys[idx]
+            self.calculate_depth_to_water(v)
+
+    def calculate_depth_to_water(self, value=None, correct_drift=False):
         """
 
         :return:
@@ -328,7 +349,7 @@ class WellpyModel(HasTraits):
                 l = l0 + m * (x - x[0])
 
             dtw = l - h
-            return dtw, l
+            return dtw
 
         ah = self.data_model.adjusted_water_head
         xs = self.data_model.x
@@ -339,31 +360,29 @@ class WellpyModel(HasTraits):
 
         ds = column_stack((mxs, mys))
 
-        dd = zeros_like(ah)
-        ddd = zeros_like(ah)
-        for i in xrange(len(ds) - 1):
-            m0, m1 = ds[i], ds[i + 1]
-            mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
-            if mask.any():
-                v, l = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
-                dd[mask] = v
-                ddd[mask] = l
+        # ddd = zeros_like(ah)
+        if value:
+            dtw = ah + value
+        else:
+            dtw = zeros_like(ah)
+            for i in xrange(len(ds) - 1):
+                m0, m1 = ds[i], ds[i + 1]
+                mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
+                if mask.any():
+                    v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
+                    dtw[mask] = v
 
         plot = self._plots[DEPTH_TO_WATER]
 
         plot.data.set_data(DEPTH_X, xs)
-        plot.data.set_data(DEPTH_Y, dd)
+        plot.data.set_data(DEPTH_Y, dtw)
 
         plot.data.set_data(MANUAL_WATER_DEPTH_X, mxs)
         plot.data.set_data(MANUAL_WATER_DEPTH_Y, mys)
         plot.default_index.metadata['selection'] = mss
 
-        # plot = self._plots[DEPTH_TO_SENSOR]
-        # plot.data.set_data(DEPTH_SENSOR_X, xs)
-        # plot.data.set_data(DEPTH_SENSOR_Y, ddd)
-
         self.data_model.depth_to_water_x = xs
-        self.data_model.depth_to_water_y = dd
+        self.data_model.depth_to_water_y = dtw
 
         self.refresh_plot()
 
@@ -583,8 +602,8 @@ class WellpyModel(HasTraits):
     def _add_depth_to_water(self, padding, *args, **kw):
         pd = self._plot_data((DEPTH_X, []),
                              (DEPTH_Y, []))
-        pd.set_data(MANUAL_WATER_DEPTH_X,[])
-        pd.set_data(MANUAL_WATER_DEPTH_Y,[])
+        pd.set_data(MANUAL_WATER_DEPTH_X, [])
+        pd.set_data(MANUAL_WATER_DEPTH_Y, [])
 
         plot = Plot(data=pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
