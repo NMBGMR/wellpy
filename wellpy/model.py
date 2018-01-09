@@ -583,6 +583,8 @@ class WellpyModel(HasTraits):
     def _add_depth_to_water(self, padding, *args, **kw):
         pd = self._plot_data((DEPTH_X, []),
                              (DEPTH_Y, []))
+        pd.set_data(MANUAL_WATER_DEPTH_X,[])
+        pd.set_data(MANUAL_WATER_DEPTH_Y,[])
 
         plot = Plot(data=pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
