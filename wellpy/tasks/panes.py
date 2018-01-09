@@ -111,7 +111,7 @@ class ToolboxPane(TraitsDockPane):
         self.model.calculate_depth_to_water(self.correct_drift)
 
     def traits_view(self):
-        manual_grp = VGroup(UItem('pane.omit_selection_button'),
+        manual_grp = HGroup(UItem('pane.omit_selection_button'),
                             UItem('pane.snap_to_selected_button'),
                             # Item('pane.constant_offset', label='Constant Offset'),
                             show_border=True, label='Manual')

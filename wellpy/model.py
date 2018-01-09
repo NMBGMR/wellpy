@@ -43,6 +43,8 @@ from wellpy.tools import DataTool, DataToolOverlay
 
 from globals import DATABSE_DEBUG, FILE_DEBUG, QC_DEBUG, DEBUG
 
+MARKER_SIZE = 4
+
 DEPTH_TO_WATER_TITLE = 'Depth To Water'
 SENSOR_TITLE = 'Sensor BGS'
 HEAD_TITLE = 'Head'
@@ -160,7 +162,7 @@ class WellpyModel(HasTraits):
                 # self.save_db()
 
         if DEBUG:
-            self.point_id_entry = 'MG-038'
+            self.point_id_entry = 'MG-030'
 
         self.load_qc()
 
@@ -326,13 +328,20 @@ class WellpyModel(HasTraits):
         sel = self.get_selection()
         if sel:
             idx = sel[0]
-            pt = self._plots[MANUAL_WATER_LEVEL]
 
-            scatterplot = pt.plots['plot1'][0]
-            ys = scatterplot.value.get_data()
+            mxs = self.data_model.manual_water_depth_x
+            mys = self.data_model.manual_water_depth_y
+            ah = self.data_model.adjusted_water_head
 
-            v = ys[idx]
-            self.calculate_depth_to_water(v)
+            xs = self.data_model.x
+            v = mys[idx]
+
+            x = mxs[idx]
+            l, h = x - (3600 * 12), x + (3600 * 12)
+            mask = where(logical_and(xs >= l, xs < h))[0]
+            dev = ah[mask].mean()-ah
+
+            self.calculate_depth_to_water(value=v+dev)
 
     def calculate_depth_to_water(self, value=None, correct_drift=False):
         """
@@ -363,8 +372,8 @@ class WellpyModel(HasTraits):
 
         ds = column_stack((delete(mxs, mss), delete(mys, mss)))
 
-        if value:
-            dtw = ah + value
+        if value is not None:
+            dtw = value
         else:
             dtw = zeros_like(ah)
             for i in xrange(len(ds) - 1):
@@ -607,7 +616,7 @@ class WellpyModel(HasTraits):
         pd.set_data(MANUAL_WATER_DEPTH_X, [])
         pd.set_data(MANUAL_WATER_DEPTH_Y, [])
 
-        plot = Plot(data=pd, padding=padding, origin='top left')
+        plot = self._plot_factory(pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
 
         line = plot.plot((DEPTH_X, DEPTH_Y))[0]
@@ -629,7 +638,7 @@ class WellpyModel(HasTraits):
 
         # plot manual measurements
         plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y),
-                  marker='circle', marker_size=2.5,
+                  marker='circle', marker_size=MARKER_SIZE,
                   type='scatter', color='yellow')
 
         return plot
@@ -674,7 +683,7 @@ class WellpyModel(HasTraits):
         pd = self._plot_data((ADJUSTED_WATER_HEAD_X, x),
                              (ADJUSTED_WATER_HEAD_Y, y))
 
-        plot = Plot(data=pd, padding=padding)
+        plot = self._plot_factory(pd, padding=padding)
 
         plot.y_axis.title = ADJUSTED_HEAD_TITLE
         lineplot = plot.plot((ADJUSTED_WATER_HEAD_X, ADJUSTED_WATER_HEAD_Y))[0]
@@ -684,6 +693,10 @@ class WellpyModel(HasTraits):
 
         self._range_tool = tool
         # self._plots[ADJ_WATER_HEAD] = plot
+        return plot
+
+    def _plot_factory(self, pd, *args, **kw):
+        plot = Plot(data=pd, bgcolor='lightyellow', *args, **kw)
         return plot
 
     def _add_manual_water_depth(self, padding, *args, **kw):
@@ -696,13 +709,13 @@ class WellpyModel(HasTraits):
         # plot, line, scatter = self._add_line_scatter('', 'Manual BGS', padding, x=x)
         pd = self._plot_data((MANUAL_WATER_DEPTH_X, x),
                              (MANUAL_WATER_DEPTH_Y, y))
-        plot = Plot(data=pd, padding=padding, origin='top left')
+        plot = self._plot_factory(pd, padding=padding, origin='top left')
 
         plot.y_axis.title = MANUAL_WATER_DEPTH_TITLE
         plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y))
 
         p = plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y), type='scatter',
-                      marker='circle', marker_size=2.5)[0]
+                      marker='circle', marker_size=MARKER_SIZE)[0]
 
         tool = RangeSelection(p, left_button_selects=True)
         p.tools.append(tool)
@@ -718,6 +731,7 @@ class WellpyModel(HasTraits):
 
     def _new_plotcontainer(self):
         pc = VPlotContainer()
+        pc.bgcolor = 'lightblue'
         return pc
 
     def _plot_container_default(self):
