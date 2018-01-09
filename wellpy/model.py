@@ -238,9 +238,11 @@ class WellpyModel(HasTraits):
             scatterplot.value.set_data(delete(ys, mask))
             scatterplot.index.metadata['selections'] = []
 
-            x, y = self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y
-            self.data_model.manual_water_depth_x = delete(x, mask)
-            self.data_model.manual_water_depth_y = delete(y, mask)
+            # x, y = self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y
+            # self.data_model.manual_water_depth_x = delete(x, mask)
+            # self.data_model.manual_water_depth_y = delete(y, mask)
+
+            self.data_model.omissions.extend(mask)
 
             self.refresh_plot()
 
@@ -356,11 +358,11 @@ class WellpyModel(HasTraits):
 
         mxs = self.data_model.manual_water_depth_x
         mys = self.data_model.manual_water_depth_y
-        mss = self.data_model.water_depth_status
 
-        ds = column_stack((mxs, mys))
+        mss = self.data_model.omissions
 
-        # ddd = zeros_like(ah)
+        ds = column_stack((delete(mxs, mss), delete(mys, mss)))
+
         if value:
             dtw = ah + value
         else:
@@ -379,7 +381,7 @@ class WellpyModel(HasTraits):
 
         plot.data.set_data(MANUAL_WATER_DEPTH_X, mxs)
         plot.data.set_data(MANUAL_WATER_DEPTH_Y, mys)
-        plot.default_index.metadata['selection'] = mss
+        # plot.default_index.metadata['selection'] = mss
 
         self.data_model.depth_to_water_x = xs
         self.data_model.depth_to_water_y = dtw
@@ -608,10 +610,6 @@ class WellpyModel(HasTraits):
         plot = Plot(data=pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
 
-        plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y),
-                  marker='circle', marker_size=2.5,
-                  type='scatter', color='yellow')
-
         line = plot.plot((DEPTH_X, DEPTH_Y))[0]
 
         dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
@@ -628,6 +626,11 @@ class WellpyModel(HasTraits):
                      max_zoom_in_factor=10000)
 
         line.overlays.append(z)
+
+        # plot manual measurements
+        plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y),
+                  marker='circle', marker_size=2.5,
+                  type='scatter', color='yellow')
 
         return plot
 

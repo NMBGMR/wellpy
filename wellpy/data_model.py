@@ -52,6 +52,7 @@ class DataModel:
         self.water_depth_status = array([])
         self.depth_to_water_x = array([])
         self.depth_to_water_y = array([])
+        self.omissions = []
 
     def get_owater_head(self):
         return array(self._owater_head)
