@@ -344,7 +344,12 @@ class WellpyModel(HasTraits):
             x = mxs[idx]
             l, h = x - (3600 * 12), x + (3600 * 12)
             mask = where(logical_and(xs >= l, xs < h))[0]
-            dev = ah[mask].mean() - ah
+            if not len(mask):
+                m = ah[0]
+            else:
+                m = ah[mask].mean()
+
+            dev = m - ah
 
             self.calculate_depth_to_water(value=v + dev)
 
