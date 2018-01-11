@@ -114,7 +114,14 @@ class WaterDepthRecord(HasTraits):
         self.point_id = point_id
         # self.measurement_date = measurement_date
         # self.level_status = level_status
-        self.measurement = (time.mktime(measurement_date.timetuple()), depth, level_status)
+
+        t = measurement_date.timetuple()
+        try:
+            timestamp = time.mktime(t)
+        except OverflowError:
+            timestamp = 0
+
+        self.measurement = (timestamp, depth, level_status)
 
 
 class DatabaseConnector(HasTraits):
@@ -190,7 +197,7 @@ class DatabaseConnector(HasTraits):
             note = 'testnote'
 
             pd = ProgressDialog(show_time=True, message='Insert')
-            pd.max =n = len(rows)
+            pd.max = n = len(rows)
             pd.open()
             for i, (x, a, ah, bgs, temp) in enumerate(rows):
                 datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
