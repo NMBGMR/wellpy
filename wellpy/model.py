@@ -162,7 +162,7 @@ class WellpyModel(HasTraits):
                 # self.save_db()
 
         if DEBUG:
-            self.point_id_entry = 'MG-030'
+            self.point_id_entry = 'TC-316'
 
         self.load_qc()
 
