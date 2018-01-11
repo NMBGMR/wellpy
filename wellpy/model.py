@@ -294,6 +294,7 @@ class WellpyModel(HasTraits):
                                   # reverse=True,
                                   key=lambda x: x[0])).T
         xs = asarray(xs, dtype=float)
+        xs[0] = 0
         ys = asarray(ys, dtype=float)
         ss = asarray(ss, dtype=bool)
         return xs, ys, ss
@@ -302,13 +303,17 @@ class WellpyModel(HasTraits):
 
         xs, ys, ss = self.get_manual_measurements(name)
 
-        # max_x = self.data_model.x[-1]
-        # idx = where(xs <= max_x)[0]
-        # idx = hstack((idx, idx[-1] + 1))
+        max_x = self.data_model.x[-1]
+        idx = where(xs <= max_x)[0]
+        try:
+            mask = hstack((idx, idx[-1] + 1))
+            xs = xs[mask]
+        except IndexError:
+            mask = idx
+            xs = xs[mask]
 
-        # xs = xs[idx]
-        # ys = ys[idx]
-        # ss = ss[idx]
+        ys = ys[mask]
+        ss = ss[mask]
 
         plot = self._plots[MANUAL_WATER_LEVEL]
         self.data_model.manual_water_depth_x = xs
@@ -339,9 +344,9 @@ class WellpyModel(HasTraits):
             x = mxs[idx]
             l, h = x - (3600 * 12), x + (3600 * 12)
             mask = where(logical_and(xs >= l, xs < h))[0]
-            dev = ah[mask].mean()-ah
+            dev = ah[mask].mean() - ah
 
-            self.calculate_depth_to_water(value=v+dev)
+            self.calculate_depth_to_water(value=v + dev)
 
     def calculate_depth_to_water(self, value=None, correct_drift=False):
         """
