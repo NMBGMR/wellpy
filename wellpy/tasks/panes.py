@@ -108,46 +108,36 @@ class ToolboxPane(TraitsDockPane):
     def _undo_button_fired(self):
         self.model.unfix_adj_head_data()
 
-    # def _smooth_data_button_fired(self):
-    #     self.model.smooth_data(self.window, self.method)
-
     def _calculate_button_fired(self):
         self.model.calculate_depth_to_water(self.correct_drift)
 
     def traits_view(self):
-        manual_grp = HGroup(UItem('pane.omit_selection_button'),
-                            UItem('pane.remove_selection_button'),
-                            UItem('pane.snap_to_selected_button'),
+        manual_grp = HGroup(UItem('pane.omit_selection_button', tooltip='Omit the selected Manual WL measurements '
+                                                                        'from calculation. Measurements WILL '
+                                                                        'be displayed in the Depth To Water graph'),
+                            UItem('pane.remove_selection_button', tooltip='Remove selected Manual WL measurements '
+                                                                          'from calculation. Measurements WILL NOT be'
+                                                                          'displayed in the Depth To Water graph'),
+                            UItem('pane.snap_to_selected_button', tooltip='Offset the Adjusted Head to the selected '
+                                                                          'Manual WL measurement'),
                             # Item('pane.constant_offset', label='Constant Offset'),
                             show_border=True, label='Manual')
 
         auto_grp = VGroup(HGroup(Item('pane.adj_head_threshold', label='Threshold'),
-                                 UItem('pane.fix_adj_head_data_button'),
+                                 UItem('pane.fix_adj_head_data_button', tooltip='Automatically remove offsets greater '
+                                                                                'than "Threshold"'),
                                  UItem('pane.undo_button')),
                           show_border=True, label='Adjusted Head')
-        # smooth_grp = VGroup(HGroup(UItem('pane.method'), Item('pane.window')),
-        #                     UItem('pane.smooth_data_button'),
-        #                     show_border=True,
-        #                     label='Smooth')
 
         calculate_grp = VGroup(HGroup(Item('pane.correct_drift'),
                                       Item('pane.drift_correction_direction'),
                                       UItem('pane.calculate_button')),
                                HGroup(UItem('pane.save_db_button'),
                                       UItem('pane.save_csv_button'),
-                                      UItem('pane.save_pdf_button'),
-                                      # UItem('pane.save_png_button')
-                                      ),
-
-                               # HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
-                               # UItem('pane.fix_depth_to_water_data_button')),
-
+                                      UItem('pane.save_pdf_button')),
                                label='Depth To Water',
                                show_border=True)
-        v = View(VGroup(manual_grp,
-                        auto_grp,
-                        # smooth_grp,
-                        calculate_grp))
+        v = View(VGroup(manual_grp, auto_grp, calculate_grp))
         return v
 
 
