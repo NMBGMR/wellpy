@@ -58,8 +58,9 @@ class ToolboxPane(TraitsDockPane):
     window = Int(11)
     method = Enum(SMOOTH_METHODS)
 
-    omit_selection_button = Button('Omit Selected Data')
+    omit_selection_button = Button('Omit Selected')
     snap_to_selected_button = Button('Snap To Selected')
+    remove_selection_button = Button('Remove Selected')
 
     calculate_button = Button('Calculate')
     correct_drift = Bool
@@ -70,6 +71,9 @@ class ToolboxPane(TraitsDockPane):
     save_pdf_button = Button('Save PDF')
 
     undo_button = Button('Undo')
+
+    def _remove_selection_button_fired(self):
+        self.model.remove_selection()
 
     def _snap_to_selected_button_fired(self):
         self.model.snap()
@@ -112,6 +116,7 @@ class ToolboxPane(TraitsDockPane):
 
     def traits_view(self):
         manual_grp = HGroup(UItem('pane.omit_selection_button'),
+                            UItem('pane.remove_selection_button'),
                             UItem('pane.snap_to_selected_button'),
                             # Item('pane.constant_offset', label='Constant Offset'),
                             show_border=True, label='Manual')

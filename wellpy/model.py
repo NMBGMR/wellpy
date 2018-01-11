@@ -228,7 +228,10 @@ class WellpyModel(HasTraits):
             mask = where(logical_and(xs >= low, xs <= high))[0]
             return mask
 
-    def omit_selection(self):
+    def remove_selection(self):
+        self.omit_selection(remove=True)
+
+    def omit_selection(self, remove=False):
         pt = self._plots[MANUAL_WATER_LEVEL]
         scatterplot = pt.plots['plot1'][0]
 
@@ -240,11 +243,12 @@ class WellpyModel(HasTraits):
             scatterplot.value.set_data(delete(ys, mask))
             scatterplot.index.metadata['selections'] = []
 
-            # x, y = self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y
-            # self.data_model.manual_water_depth_x = delete(x, mask)
-            # self.data_model.manual_water_depth_y = delete(y, mask)
-
-            self.data_model.omissions.extend(mask)
+            if remove:
+                x, y = self.data_model.manual_water_depth_x, self.data_model.manual_water_depth_y
+                self.data_model.manual_water_depth_x = delete(x, mask)
+                self.data_model.manual_water_depth_y = delete(y, mask)
+            else:
+                self.data_model.omissions.extend(mask)
 
             self.refresh_plot()
 
