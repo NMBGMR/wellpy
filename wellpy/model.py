@@ -302,13 +302,13 @@ class WellpyModel(HasTraits):
 
         xs, ys, ss = self.get_manual_measurements(name)
 
-        max_x = self.data_model.x[-1]
-        idx = where(xs <= max_x)[0]
-        idx = hstack((idx, idx[-1] + 1))
+        # max_x = self.data_model.x[-1]
+        # idx = where(xs <= max_x)[0]
+        # idx = hstack((idx, idx[-1] + 1))
 
-        xs = xs[idx]
-        ys = ys[idx]
-        ss = ss[idx]
+        # xs = xs[idx]
+        # ys = ys[idx]
+        # ss = ss[idx]
 
         plot = self._plots[MANUAL_WATER_LEVEL]
         self.data_model.manual_water_depth_x = xs
