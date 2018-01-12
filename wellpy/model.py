@@ -36,6 +36,7 @@ from pyface.file_dialog import FileDialog
 from pyface.message_dialog import information, warning
 from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int, Any
 
+from wellpy.axistool import AxisTool
 from wellpy.data_model import DataModel
 from wellpy.database_connector import DatabaseConnector, PointIDRecord
 from wellpy.fuzzyfinder import fuzzyfinder
@@ -711,6 +712,15 @@ class WellpyModel(HasTraits):
 
     def _plot_factory(self, pd, *args, **kw):
         plot = Plot(data=pd, bgcolor='lightyellow', *args, **kw)
+        plot.y_axis.title_font = 'Arial 14'
+        plot.x_axis.title_font = 'Arial 14'
+        plot.x_axis.tick_label_font = 'Arial 14'
+        plot.y_axis.tick_label_font = 'Arial 14'
+
+        t = AxisTool(component=plot.x_axis)
+        plot.tools.append(t)
+        t = AxisTool(component=plot.y_axis)
+        plot.tools.append(t)
         return plot
 
     def _add_manual_water_depth(self, padding, *args, **kw):
