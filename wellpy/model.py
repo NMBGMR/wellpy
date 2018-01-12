@@ -265,7 +265,7 @@ class WellpyModel(HasTraits):
 
     def save_csv(self, p, delimiter=','):
         if self.selected_point_id:
-            keys, data = self._gather_data(use_isoformat=True)
+            keys, data = self._gather_data(use_excel_format=True)
             header = ','.join(keys)
             if not p.endswith('.csv'):
                 p = '{}.csv'.format(p)
@@ -631,7 +631,7 @@ class WellpyModel(HasTraits):
                         if isinstance(o, DataToolOverlay):
                             o.visible = ovisible
 
-    def _gather_data(self, with_qc=False, use_isoformat=False):
+    def _gather_data(self, with_qc=False, use_isoformat=False, use_excel_format=False):
         model = self.data_model
         x = model.x
         depth_to_water = model.depth_to_water_y
@@ -641,6 +641,9 @@ class WellpyModel(HasTraits):
 
         if use_isoformat:
             x = [datetime.fromtimestamp(xi).isoformat() for xi in x]
+        elif use_excel_format:
+            x = [datetime.fromtimestamp(xi).strftime('%m/%d/%Y %H:%M') for xi in x]
+
         args = (x, h, ah, depth_to_water, water_temp)
         keys = ('time', 'head', 'adjusted_head', 'depth_to_water', 'water_temp')
         if with_qc:
