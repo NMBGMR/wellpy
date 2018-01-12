@@ -265,8 +265,7 @@ class WellpyModel(HasTraits):
 
     def save_csv(self, p, delimiter=','):
         if self.selected_point_id:
-            keys, data = self._gather_data(use_excel_format=True)
-            header = ','.join(keys)
+            header, data = self._gather_data(use_excel_format=True)
             if not p.endswith('.csv'):
                 p = '{}.csv'.format(p)
 
@@ -583,7 +582,7 @@ class WellpyModel(HasTraits):
     # private
 
     def _save_db(self, with_qc=False):
-        keys, data = self._gather_data(with_qc=with_qc)
+        _, data = self._gather_data(with_qc=with_qc)
         if YES == confirm(None, 'Are you sure you want to save to the database?'):
             pid = self.selected_point_id.name
             e, i = self.db.insert_continuous_water_levels(pid, data)
@@ -645,13 +644,15 @@ class WellpyModel(HasTraits):
             x = [datetime.fromtimestamp(xi).strftime('%m/%d/%Y %H:%M') for xi in x]
 
         args = (x, h, ah, depth_to_water, water_temp)
-        keys = ('time', 'head', 'adjusted_head', 'depth_to_water', 'water_temp')
+        keys = ('date/time', 'head (ft)', 'adjusted head (ft)', 'Depth to water (ft bgs)', 'water_temp (C)')
         if with_qc:
             args = args + (ones_like(x),)
             keys = keys + ('qc',)
 
+        header = ','.join(keys)
+
         data = array(args).T
-        return keys, data
+        return header, data
 
     def _add_depth_to_water(self, padding, *args, **kw):
         pd = self._plot_data((DEPTH_X, []),
