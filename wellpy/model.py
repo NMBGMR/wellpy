@@ -46,7 +46,7 @@ from globals import DATABSE_DEBUG, FILE_DEBUG, QC_DEBUG, DEBUG
 
 MARKER_SIZE = 4
 
-DEPTH_TO_WATER_TITLE = 'Depth To Water'
+DEPTH_TO_WATER_TITLE = 'Depth To Water (ft bgs)'
 SENSOR_TITLE = 'Sensor BGS'
 HEAD_TITLE = 'Head'
 ADJUSTED_HEAD_TITLE = 'Adjusted Head'
@@ -331,6 +331,7 @@ class WellpyModel(HasTraits):
         ss = where(asarray(ss, dtype=bool))[0]
         plot.default_index.metadata['selection'] = ss
 
+        plot.title = self.selected_point_id.name
         self.refresh_plot()
 
     def snap(self):
@@ -515,7 +516,7 @@ class WellpyModel(HasTraits):
         self.plot_container = container = self._new_plotcontainer()
         self._plots = {}
 
-        padding = [70, 10, 5, 5]
+        padding = [90, 10, 5, 5]
 
         if qc:
             funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),)
@@ -528,6 +529,7 @@ class WellpyModel(HasTraits):
                      (MANUAL_WATER_LEVEL, self._add_manual_water_depth),)
 
         index_range = None
+        n = len(funcs)
         for i, (k, f) in enumerate(funcs):
             plot = f(padding, qc)
             if i == 0:
@@ -535,9 +537,19 @@ class WellpyModel(HasTraits):
                                        tick_generator=ScalesTickGenerator(scale=CalendarScaleSystem()))
                 plot.padding_bottom = 50
                 plot.x_axis = bottom_axis
+                plot.x_axis.title_font = 'modern 14'
+                plot.x_axis.tick_label_font = 'modern 14'
+                plot.x_axis.title = 'Time'
+                t = AxisTool(component=plot.x_axis)
+                plot.tools.append(t)
+
             else:
+                plot.resizable='h'
+                plot.bounds=[1, 200]
                 plot.index_range = index_range
                 plot.x_axis.visible = False
+                if i == n - 1:
+                    plot.padding_top = 30
 
             index_range = plot.index_range
             container.add(plot)
@@ -587,6 +599,13 @@ class WellpyModel(HasTraits):
                 return p
 
     def _save_depth_to_water(self, plot, ext, **render):
+        otop = None
+        if self.selected_point_id:
+            plot._title.text = self.selected_point_id.name
+            plot._title.visible = True
+            otop = plot.padding_top
+            plot.padding_top = 30
+
         p = self._save_path(ext)
         if p:
             gc = PdfPlotGraphicsContext(filename=p)
@@ -600,6 +619,12 @@ class WellpyModel(HasTraits):
             plot.invalidate_and_redraw()
             gc.render_component(plot, **render)
             gc.save()
+
+            plot._title.visible = False
+
+            if otop is not None:
+                plot.padding_top = otop
+
             for lines in plot.plots.itervalues():
                 for line in lines:
                     for o in line.overlays:
@@ -712,13 +737,10 @@ class WellpyModel(HasTraits):
 
     def _plot_factory(self, pd, *args, **kw):
         plot = Plot(data=pd, bgcolor='lightyellow', *args, **kw)
-        plot.y_axis.title_font = 'Arial 14'
-        plot.x_axis.title_font = 'Arial 14'
-        plot.x_axis.tick_label_font = 'Arial 14'
-        plot.y_axis.tick_label_font = 'Arial 14'
 
-        t = AxisTool(component=plot.x_axis)
-        plot.tools.append(t)
+        plot.y_axis.title_font = 'modern 14'
+        plot.y_axis.tick_label_font = 'modern 14'
+
         t = AxisTool(component=plot.y_axis)
         plot.tools.append(t)
         return plot
