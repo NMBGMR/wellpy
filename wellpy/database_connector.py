@@ -70,14 +70,18 @@ class MockCursor:
         pass
 
 
+def get_connection(h, u, p, n, *args, **kw):
+    try:
+        conn = pymssql.connect(h, u, p, n, timeout=15, login_timeout=5, *args, **kw)
+    except (pymssql.InterfaceError, pymssql.OperationalError):
+        conn = MockConnection()
+
+    return conn
+
+
 class SessionCTX:
     def __init__(self, h, u, p, n, *args, **kw):
-        try:
-            conn = pymssql.connect(h, u, p, n, timeout=3, login_timeout=5, *args, **kw)
-        except (pymssql.InterfaceError, pymssql.OperationalError):
-            conn = MockConnection()
-            pass
-
+        conn = get_connection(h,u,p,n,*args,**kw)
         self._conn = conn
 
     def __enter__(self):
@@ -143,12 +147,12 @@ class DatabaseConnector(HasTraits):
     def get_point_ids(self):
         with self._get_cursor() as cursor:
             cursor.execute('GetPointIDsPython')
-            return [PointIDRecord(*r) for r in cursor.fetchall()]
+            return sorted([PointIDRecord(*r) for r in cursor.fetchall()], key=lambda x: x.name)
 
     def get_qc_point_ids(self, qced=False):
         with self._get_cursor() as cursor:
             cursor.execute('GetPointIDsQCdPython %d', (int(qced),))
-            return [PointIDRecord(*r) for r in cursor.fetchall()]
+            return sorted([PointIDRecord(*r) for r in cursor.fetchall()], key=lambda x: x.name)
 
     def get_depth_to_water(self, point_id):
         with self._get_cursor() as cursor:
@@ -192,32 +196,43 @@ class DatabaseConnector(HasTraits):
 
         user = config.user
 
-        with self._get_cursor() as cursor:
-            pd = ProgressDialog(show_time=True, message='Insert')
-            pd.max = n = len(rows)
-            pd.open()
-
-            note = 'testnote'
-            if with_update:
+        n = len(rows)
+        note = 'testnote'
+        if with_update:
+            with self._get_cursor() as cursor:
                 cmd = 'InsertWLCPressurePython_NEW_wUpdate %s, %s, %d, %d, %d, %d, %s'
                 for i, (x, a, ah, bgs, temp) in enumerate(rows):
                     datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
                     args = (pointid, datemeasured, temp, a, ah, bgs, note)
                     cursor.execute(cmd, args)
-                    # pd.change_message('Insert row:  {}/{}'.format(i, n))
-                    # pd.update(i)
-            else:
-                cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure_Test
-                         (PointID, DateMeasured, TemperatureWater, WaterHead, 
-                           WaterHeadAdjusted, DepthToWaterBGS, Notes)
-                         VALUES (%s, %s, %d, %d, %d, %d, %s)'''
-
+        else:
+            cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure
+                     (PointID, DateMeasured, TemperatureWater, WaterHead, 
+                       WaterHeadAdjusted, DepthToWaterBGS, Notes)
+                     VALUES (%s, %s, %d, %d, %d, %d, %s)'''
+            conn = self._get_connection()
+            chunk_len = 300
+            ntries = 2
+            cursor = conn.cursor()
+            cn = n/chunk_len+1
+            for i in xrange(0, n, chunk_len):
+                print 'Insert chunk:  {}/{}'.format(i, cn)
+                #pd.change_message('Insert chunk:  {}/{}'.format(i, cn))
+                # pd.update(i)
+                chunk = rows[i:i+chunk_len]
                 values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'), temp, a, ah, bgs, note)
-                          for pointid, x, temp, a, ah, bgs, note in rows]
+                          for x, a, ah, bgs, temp in chunk]
+                for j in xrange(ntries):
+                    try:
+                        cursor.executemany(cmd, values)
+                    except:
+                        print 'need to retry', j+1
+                        time.sleep(2)
+                        continue
 
-                cursor.executemany(cmd, values)
-
-            pd.close()
+                    break
+                conn.commit()
+            conn.close()
 
         inserted_nresults = len(self.get_continuous_water_levels(pointid))
         return existing_nresults, inserted_nresults
@@ -299,7 +314,8 @@ class DatabaseConnector(HasTraits):
 
     def _get_cursor(self):
         return SessionCTX(self._host, self._user, self._password, self._dbname)
-
+    def _get_connection(self):
+        return get_connection(self._host, self._user, self._password, self._dbname)
 
 if __name__ == '__main__':
     d = DatabaseConnector(bind=False)

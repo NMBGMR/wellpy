@@ -298,7 +298,7 @@ class WellpyModel(HasTraits):
                                   # reverse=True,
                                   key=lambda x: x[0])).T
         xs = asarray(xs, dtype=float)
-        xs[0] = 0
+        #xs[0] = 0
         ys = asarray(ys, dtype=float)
         ss = asarray(ss, dtype=bool)
         return xs, ys, ss
