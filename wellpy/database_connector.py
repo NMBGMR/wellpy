@@ -173,7 +173,7 @@ class DatabaseConnector(HasTraits):
             schema = etree.XMLSchema(xmlschema_doc)
             return schema
 
-    def insert_continuous_water_levels(self, pointid, rows):
+    def insert_continuous_water_levels(self, pointid, rows, with_update=False):
         """
         InsertWLCPressurePython
         @PointID nvarchar(50),
@@ -193,18 +193,30 @@ class DatabaseConnector(HasTraits):
         user = config.user
 
         with self._get_cursor() as cursor:
-            cmd = 'InsertWLCPressurePython_NEW_wUpdate %s, %s, %d, %d, %d, %d, %s'
-            note = 'testnote'
-
             pd = ProgressDialog(show_time=True, message='Insert')
             pd.max = n = len(rows)
             pd.open()
-            for i, (x, a, ah, bgs, temp) in enumerate(rows):
-                datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
-                args = (pointid, datemeasured, temp, a, ah, bgs, note)
-                cursor.execute(cmd, args)
-                # pd.change_message('Insert row:  {}/{}'.format(i, n))
-                # pd.update(i)
+
+            note = 'testnote'
+            if with_update:
+                cmd = 'InsertWLCPressurePython_NEW_wUpdate %s, %s, %d, %d, %d, %d, %s'
+                for i, (x, a, ah, bgs, temp) in enumerate(rows):
+                    datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
+                    args = (pointid, datemeasured, temp, a, ah, bgs, note)
+                    cursor.execute(cmd, args)
+                    # pd.change_message('Insert row:  {}/{}'.format(i, n))
+                    # pd.update(i)
+            else:
+                cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure_Test
+                         (PointID, DateMeasured, TemperatureWater, WaterHead, 
+                           WaterHeadAdjusted, DepthToWaterBGS, Notes)
+                         VALUES (%s, %s, %d, %d, %d, %d, %s)'''
+
+                values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'), temp, a, ah, bgs, note)
+                          for pointid, x, temp, a, ah, bgs, note in rows]
+
+                cursor.executemany(cmd, values)
+
             pd.close()
 
         inserted_nresults = len(self.get_continuous_water_levels(pointid))

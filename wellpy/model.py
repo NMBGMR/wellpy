@@ -543,8 +543,8 @@ class WellpyModel(HasTraits):
                 plot.tools.append(t)
 
             else:
-                plot.resizable='h'
-                plot.bounds=[1, 200]
+                plot.resizable = 'h'
+                plot.bounds = [1, 200]
                 plot.index_range = index_range
                 plot.x_axis.visible = False
                 if i == n - 1:
@@ -585,7 +585,11 @@ class WellpyModel(HasTraits):
         _, data = self._gather_data(with_qc=with_qc)
         if YES == confirm(None, 'Are you sure you want to save to the database?'):
             pid = self.selected_point_id.name
-            e, i = self.db.insert_continuous_water_levels(pid, data)
+            with_update = True
+            if confirm(None, 'Is this new data or an update? Yes=New, No=Update') == YES:
+                with_update = False
+
+            e, i = self.db.insert_continuous_water_levels(pid, data, with_update=with_update)
             information(None, 'There were {} existing records for {}. {} records inserted'.format(e, pid, i - e))
 
     def _save_path(self, ext):
