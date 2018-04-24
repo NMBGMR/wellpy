@@ -203,8 +203,8 @@ class DatabaseConnector(HasTraits):
                 datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
                 args = (pointid, datemeasured, temp, a, ah, bgs, note)
                 cursor.execute(cmd, args)
-                pd.change_message('Insert row:  {}/{}'.format(i, n))
-                pd.update(i)
+                # pd.change_message('Insert row:  {}/{}'.format(i, n))
+                # pd.update(i)
             pd.close()
 
         inserted_nresults = len(self.get_continuous_water_levels(pointid))
