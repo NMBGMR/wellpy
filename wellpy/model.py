@@ -163,25 +163,16 @@ class WellpyModel(HasTraits):
                 # self.save_db()
 
         if DEBUG:
-            self.point_id_entry = 'AR-0007'
+            self.point_id_entry = 'SO-0227'
 
         self.load_qc()
 
     def apply_qc(self):
         self._save_db(with_qc=True)
 
-    def load_qc_data(self):
-        pid = self.selected_qc_point_id
-        if pid is None:
-            return
-
-        records = self.db.get_continuous_water_levels(pid.name, qced=0)
+    def get_continuous(self, name, qced=0):
+        records = self.db.get_continuous_water_levels(name, qced=qced)
         if records:
-            self.initialize_plot(qc=True)
-
-            """
-            PointID, Timestamp, 'temp', 'head', 'adjusted_head', 'depth_to_water'', note
-            """
             n = len(records)
 
             xs = zeros(n)
@@ -196,7 +187,36 @@ class WellpyModel(HasTraits):
                 hs[i] = float(ri[3])
                 ahs[i] = float(ri[4])
                 ds[i] = float(ri[5])
+            return xs, wts, hs, ahs, ds
 
+    def load_qc_data(self):
+        pid = self.selected_qc_point_id
+        if pid is None:
+            return
+
+        args = self.get_continuous(pid.name, qced=0)
+        if args:
+            self.initialize_plot(qc=True)
+
+            """
+            PointID, Timestamp, 'temp', 'head', 'adjusted_head', 'depth_to_water'', note
+            """
+            # n = len(records)
+            #
+            # xs = zeros(n)
+            # hs = zeros(n)
+            # ahs = zeros(n)
+            # ds = zeros(n)
+            # wts = zeros(n)
+            # for i, ri in enumerate(sorted(records, key=lambda x: x[1])):
+            #     x = time.mktime(ri[1].timetuple())
+            #     xs[i] = x
+            #     wts[i] = float(ri[2])
+            #     hs[i] = float(ri[3])
+            #     ahs[i] = float(ri[4])
+            #     ds[i] = float(ri[5])
+
+            xs, wts, hs, ahs, ds = args
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, xs)
             plot.data.set_data(DEPTH_Y, ds)
@@ -305,7 +325,13 @@ class WellpyModel(HasTraits):
         return xs, ys, ss
 
     def plot_existing_continuous(self, name):
-        wl = self.db.get_continuous_water_levels(name)
+        args = self.get_continuous(name)
+        if args:
+            xs, wts, hs, ahs, ds = args
+
+            plot = self._plots[DEPTH_TO_WATER]
+            plot.data.set_data(DEPTH_X, xs)
+            plot.data.set_data(DEPTH_Y, ds)
 
     def plot_manual_measurements(self, name):
 
