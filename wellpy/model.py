@@ -468,7 +468,9 @@ class WellpyModel(HasTraits):
         ey = plot.data.get_data(EXISTING_DEPTH_Y)
 
         dev = y[0]-ey[-1]
-        plot.data.set_data(DEPTH_Y, y-dev)
+        ny = y - dev
+        plot.data.set_data(DEPTH_Y, ny)
+        self.data_model.depth_to_water_y = ny
         self.refresh_plot()
 
     def _plot_adj_head(self, ys):
