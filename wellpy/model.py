@@ -163,7 +163,7 @@ class WellpyModel(HasTraits):
                 # self.save_db()
 
         if DEBUG:
-            self.point_id_entry = 'TC-316'
+            self.point_id_entry = 'AR-0007'
 
         self.load_qc()
 
@@ -305,7 +305,7 @@ class WellpyModel(HasTraits):
         return xs, ys, ss
 
     def plot_existing_continuous(self, name):
-        pass
+        wl = self.db.get_continuous_water_levels(name)
 
     def plot_manual_measurements(self, name):
 
