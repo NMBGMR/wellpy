@@ -24,7 +24,7 @@ from traits.api import Button, Float, Property, Int, Enum, Bool, Event
 from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring, EnumEditor
 from traitsui.tabular_adapter import TabularAdapter
 
-from globals import FILE_DEBUG
+from globals import FILE_DEBUG, DEBUG
 from wellpy.sigproc import SMOOTH_METHODS
 
 
@@ -212,7 +212,7 @@ class WellPane(TraitsDockPane):
 
     def _open_file_button_fired(self):
 
-        if FILE_DEBUG:
+        if DEBUG and FILE_DEBUG:
             self.model.path = FILE_DEBUG
             self.model.load_file(FILE_DEBUG)
         else:

@@ -153,7 +153,7 @@ class DataModel:
 
                 if not self.pointid:
                     if line[0].startswith('Location'):
-                        self.pointid = line[0].split('=')[1].strip()
+                        self.pointid = line[0].split('=')[1].strip().upper()
 
                 if i < 53:
                     continue

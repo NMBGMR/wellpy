@@ -156,7 +156,6 @@ class WellpyModel(HasTraits):
             self.selected_point_id = self.point_ids[0]
 
         if DEBUG:
-
             if FILE_DEBUG:
                 self.path = FILE_DEBUG
                 if self.load_file(FILE_DEBUG):

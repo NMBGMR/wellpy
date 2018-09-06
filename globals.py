@@ -20,4 +20,6 @@ FILE_DEBUG = os.environ.get('FILE_DEBUG')
 # FILE_DEBUUG = None
 QC_DEBUG = os.environ.get('QC_DEBUG')
 DEBUG = os.environ.get('DEBUG')
+
+DEBUG = True if DEBUG == '1' else False
 # ============= EOF =============================================
