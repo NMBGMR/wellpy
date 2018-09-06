@@ -290,6 +290,7 @@ class WellpyModel(HasTraits):
         pid = self.selected_point_id
         if pid is not None:
             self.plot_manual_measurements(pid.name)
+            self.plot_existing_continuous(pid.name)
 
     def get_manual_measurements(self, name):
         ms = self.db.get_depth_to_water(name)
@@ -302,6 +303,9 @@ class WellpyModel(HasTraits):
         ys = asarray(ys, dtype=float)
         ss = asarray(ss, dtype=bool)
         return xs, ys, ss
+
+    def plot_existing_continuous(self, name):
+        pass
 
     def plot_manual_measurements(self, name):
 
@@ -426,6 +430,10 @@ class WellpyModel(HasTraits):
         ys, zs, fs = self.data_model.fix_data(ys, threshold, self._range_tool.selection)
         self.auto_results = [AutoResult(*fi) for fi in fs]
         self._plot_adj_head(ys)
+
+    def match_timeseries(self):
+        ys = self.data_model.get_depth_to_water()
+        # self._plot_
 
     def _plot_adj_head(self, ys):
         self.data_model.set_water_head(ys)

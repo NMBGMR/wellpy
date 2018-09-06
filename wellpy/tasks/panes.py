@@ -69,6 +69,7 @@ class ToolboxPane(TraitsDockPane):
     save_csv_button = Button('Save CSV')
     save_png_button = Button('Save PNG')
     save_pdf_button = Button('Save PDF')
+    match_timeseries_button = Button('Match Timeseries')
 
     undo_button = Button('Undo')
 
@@ -105,6 +106,9 @@ class ToolboxPane(TraitsDockPane):
     def _fix_depth_to_water_data_button_fired(self):
         self.model.fix_depth_to_water_data(self.depth_to_water_threshold)
 
+    def _match_timeseries_button_fired(self):
+        self.model.match_timeseries()
+
     def _undo_button_fired(self):
         self.model.unfix_adj_head_data()
 
@@ -132,6 +136,11 @@ class ToolboxPane(TraitsDockPane):
         calculate_grp = VGroup(HGroup(Item('pane.correct_drift'),
                                       Item('pane.drift_correction_direction'),
                                       UItem('pane.calculate_button')),
+                               HGroup(
+                                        # Item('pane.match_timeseries_threshold', label='Threshold'),
+                                      UItem('pane.match_timeseries_button',
+                                            tooltip='Automatically remove offsets greater '
+                                                    'than "Threshold"'), ),
                                HGroup(UItem('pane.save_db_button'),
                                       UItem('pane.save_csv_button'),
                                       UItem('pane.save_pdf_button')),

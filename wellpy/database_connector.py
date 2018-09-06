@@ -119,12 +119,12 @@ class WaterDepthRecord(HasTraits):
         # self.measurement_date = measurement_date
         # self.level_status = level_status
 
-        t = measurement_date.timetuple()
-        try:
-            timestamp = time.mktime(t)
-        except (OverflowError, ValueError):
-            timestamp = 0
-
+        # t = measurement_date.timetuple()
+        # try:
+        #     timestamp = time.mktime(t)
+        # except (OverflowError, ValueError):
+        #     timestamp = 0
+        timestamp = datetime.strptime(measurement_date, '%y-%m-%d')
         self.measurement = (timestamp, depth, level_status)
 
 
