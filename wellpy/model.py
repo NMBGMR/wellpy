@@ -468,7 +468,7 @@ class WellpyModel(HasTraits):
         ey = plot.data.get_data(EXISTING_DEPTH_Y)
 
         dev = y[0]-ey[-1]
-        plot.data.set_data(EXISTING_DEPTH_Y, ey+dev)
+        plot.data.set_data(DEPTH_Y, y-dev)
         self.refresh_plot()
 
     def _plot_adj_head(self, ys):
@@ -530,7 +530,6 @@ class WellpyModel(HasTraits):
         self.data_model = data
         self.initialize_plot()
 
-        print 'loaded pointid', data.pointid
         # get the point id
         pointid = data.pointid
         if pointid is None:
