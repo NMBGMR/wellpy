@@ -72,6 +72,10 @@ DEPTH_SENSOR_X = 'depth_sensor_x'
 DEPTH_Y = 'depth_y'
 DEPTH_X = 'depth_x'
 
+EXISTING_DEPTH_Y = 'existing_depth_y'
+EXISTING_DEPTH_X = 'exisiting_depth_x'
+
+
 QC_DEPTH_Y = 'depth_y'
 QC_DEPTH_X = 'depth_x'
 
@@ -80,6 +84,7 @@ ADJ_WATER_HEAD = 'adjusted_water_head'
 QC_ADJ_WATER_HEAD = 'qc_adjusted_water_head'
 DEPTH_TO_SENSOR = 'depth_to_sensor'
 DEPTH_TO_WATER = 'depth_to_water'
+EXISTING_DEPTH_TO_WATER = 'exisiting_depth_to_water'
 QC_DEPTH_TO_WATER = 'depth_to_water'
 MANUAL_WATER_LEVEL = 'manual_water_level'
 
@@ -328,9 +333,9 @@ class WellpyModel(HasTraits):
         if args:
             xs, wts, hs, ahs, ds = args
 
-            plot = self._plots[DEPTH_TO_WATER]
-            plot.data.set_data(DEPTH_X, xs)
-            plot.data.set_data(DEPTH_Y, ds)
+            plot = self._plots[EXISTING_DEPTH_TO_WATER]
+            plot.data.set_data(EXISTING_DEPTH_X, xs)
+            plot.data.set_data(EXISTING_DEPTH_Y, ds)
 
     def plot_manual_measurements(self, name):
 
@@ -697,11 +702,16 @@ class WellpyModel(HasTraits):
                              (DEPTH_Y, []))
         pd.set_data(MANUAL_WATER_DEPTH_X, [])
         pd.set_data(MANUAL_WATER_DEPTH_Y, [])
+        pd.set_data(EXISTING_DEPTH_X, [])
+        pd.set_data(EXISTING_DEPTH_Y, [])
 
         plot = self._plot_factory(pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
 
+        self._plots[EXISTING_DEPTH_TO_WATER] = plot
+
         line = plot.plot((DEPTH_X, DEPTH_Y))[0]
+        line2 = plot.plot((EXISTING_DEPTH_X, EXISTING_DEPTH_Y), color='red')[0]
 
         dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
         dto = DataToolOverlay(component=line, tool=dt)
@@ -722,7 +732,6 @@ class WellpyModel(HasTraits):
         plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y),
                   marker='circle', marker_size=MARKER_SIZE,
                   type='scatter', color='yellow')
-
         return plot
 
     # def _add_depth_to_sensor(self, padding, *args, **kw):
