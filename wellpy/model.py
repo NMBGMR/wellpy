@@ -155,15 +155,15 @@ class WellpyModel(HasTraits):
         if self.point_ids:
             self.selected_point_id = self.point_ids[0]
 
-        if FILE_DEBUG:
-            self.path = FILE_DEBUG
-            if self.load_file(FILE_DEBUG):
-                self.fix_adj_head_data(0.25)
-                # self.calculate_depth_to_water()
-                # self.save_db()
-
         if DEBUG:
-            self.point_id_entry = 'SO-0227'
+
+            if FILE_DEBUG:
+                self.path = FILE_DEBUG
+                if self.load_file(FILE_DEBUG):
+                    self.fix_adj_head_data(0.25)
+                    # self.calculate_depth_to_water()
+                    # self.save_db()
+            self.point_id_entry = os.environ.get('POINTID_DEBUG', 'SO-0227')
 
         self.load_qc()
 
@@ -520,6 +520,7 @@ class WellpyModel(HasTraits):
         self.data_model = data
         self.initialize_plot()
 
+        print 'loaded pointid', data.pointid
         # get the point id
         pointid = data.pointid
         if pointid is None:
