@@ -462,8 +462,14 @@ class WellpyModel(HasTraits):
         self._plot_adj_head(ys)
 
     def match_timeseries(self):
-        ys = self.data_model.get_depth_to_water()
-        # self._plot_
+        # ys = self.data_model.get_depth_to_water()
+        plot = self._plots[DEPTH_TO_WATER]
+        y = plot.data.get_data(DEPTH_Y)
+        ey = plot.data.get_data(EXISTING_DEPTH_Y)
+
+        dev = y[0]-ey[-1]
+        plot.data.set_data(EXISTING_DEPTH_Y, ey+dev)
+        self.refresh_plot()
 
     def _plot_adj_head(self, ys):
         self.data_model.set_water_head(ys)
