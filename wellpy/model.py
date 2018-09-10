@@ -75,7 +75,6 @@ DEPTH_X = 'depth_x'
 EXISTING_DEPTH_Y = 'existing_depth_y'
 EXISTING_DEPTH_X = 'exisiting_depth_x'
 
-
 QC_DEPTH_Y = 'depth_y'
 QC_DEPTH_X = 'depth_x'
 
@@ -113,6 +112,17 @@ class SaveSpec:
     measurement_method = None
 
 
+class Deviation(HasTraits):
+    idx = Int
+    time_s = Int
+    manual = Float
+    continuous = Float
+
+    @property
+    def deviation(self):
+        return self.manual - self.continuous
+
+
 class WellpyModel(HasTraits):
     plot_container = Instance(VPlotContainer)
     _tool = None
@@ -145,6 +155,8 @@ class WellpyModel(HasTraits):
     db = Instance(DatabaseConnector)
 
     scroll_to_row = Int
+
+    deviations = List(Deviation)
 
     def activated(self):
         if DATABSE_DEBUG:
@@ -220,9 +232,9 @@ class WellpyModel(HasTraits):
             #     ahs[i] = float(ri[4])
             #     ds[i] = float(ri[5])
 
-            xs, wts, hs, ahs, ds = args
+            cxs, wts, hs, ahs, ds = args
             plot = self._plots[DEPTH_TO_WATER]
-            plot.data.set_data(DEPTH_X, xs)
+            plot.data.set_data(DEPTH_X, cxs)
             plot.data.set_data(DEPTH_Y, ds)
 
             xs, ys, ss = self.get_manual_measurements(pid.name)
@@ -233,9 +245,21 @@ class WellpyModel(HasTraits):
                       marker='circle', marker_size=2.5,
                       type='scatter', color='yellow')
 
+            self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
         else:
             information(None, 'No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
+
+    def _calculate_deviations(self, mxs, mys, cxs, cys):
+        devs = []
+        for midx, (mx, my) in enumerate(zip(mxs, mys)):
+            idx = where(cxs - mx < 60)[0]
+            if idx.size:
+                idx = idx[-1]
+                dev = Deviation(idx=midx, time_s=idx, manual=my, continuous=cys[idx])
+                devs.append(dev)
+
+        self.deviations = devs
 
     def load_qc(self):
         self.qc_point_ids = self.db.get_qc_point_ids()
@@ -323,7 +347,7 @@ class WellpyModel(HasTraits):
                                   # reverse=True,
                                   key=lambda x: x[0])).T
         xs = asarray(xs, dtype=float)
-        #xs[0] = 0
+        # xs[0] = 0
         ys = asarray(ys, dtype=float)
         ss = asarray(ss, dtype=bool)
         return xs, ys, ss
@@ -467,7 +491,7 @@ class WellpyModel(HasTraits):
         y = plot.data.get_data(DEPTH_Y)
         ey = plot.data.get_data(EXISTING_DEPTH_Y)
 
-        dev = y[0]-ey[-1]
+        dev = y[0] - ey[-1]
         ny = y - dev
         plot.data.set_data(DEPTH_Y, ny)
         self.data_model.depth_to_water_y = ny

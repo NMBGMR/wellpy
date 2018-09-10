@@ -21,7 +21,7 @@ from pyface.file_dialog import FileDialog
 from pyface.tasks.traits_dock_pane import TraitsDockPane
 from pyface.tasks.traits_task_pane import TraitsTaskPane
 from traits.api import Button, Float, Property, Int, Enum, Bool, Event
-from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring, EnumEditor
+from traitsui.api import View, UItem, TabularEditor, Item, HGroup, VGroup, spring, EnumEditor, Group
 from traitsui.tabular_adapter import TabularAdapter
 
 from globals import FILE_DEBUG, DEBUG
@@ -137,10 +137,10 @@ class ToolboxPane(TraitsDockPane):
                                       Item('pane.drift_correction_direction'),
                                       UItem('pane.calculate_button')),
                                HGroup(
-                                        # Item('pane.match_timeseries_threshold', label='Threshold'),
-                                      UItem('pane.match_timeseries_button',
-                                            tooltip='Automatically remove offsets greater '
-                                                    'than "Threshold"'), ),
+                                   # Item('pane.match_timeseries_threshold', label='Threshold'),
+                                   UItem('pane.match_timeseries_button',
+                                         tooltip='Automatically remove offsets greater '
+                                                 'than "Threshold"'), ),
                                HGroup(UItem('pane.save_db_button'),
                                       UItem('pane.save_csv_button'),
                                       UItem('pane.save_pdf_button')),
@@ -169,6 +169,27 @@ class AutoResultsPane(TraitsDockPane):
         return v
 
 
+class DeviationAdapter(TabularAdapter):
+    columns = [('Time', 'time_s'),
+               ('Manual Index', 'idx'),
+               ('Deviation', 'deviation'),
+               ('Manual', 'manual'),
+               ('Continuous', 'continuous')]
+
+    deviation_text = Property
+    continuous_text = Property
+    manual_text = Property
+
+    def _get_deviation_text(self):
+        return '{:0.3f}'.format(self.item.deviation)
+
+    def _get_manual_text(self):
+        return '{:0.3f}'.format(self.item.manual)
+
+    def _get_continuous_text(self):
+        return '{:0.3f}'.format(self.item.continuous)
+
+
 class QCPane(TraitsDockPane):
     id = 'wellpy.qc.pane'
     name = 'QC'
@@ -191,13 +212,16 @@ class QCPane(TraitsDockPane):
         pa = PointIDAdapter()
         pa.columns = pa.columns[:1]
 
-        v = View(HGroup(UItem('pane.apply_qc_button'),
-                        UItem('pane.load_qc_button')),
-                 UItem('qc_point_ids',
-                       editor=TabularEditor(selected='selected_qc_point_id',
-                                            dclicked='pane.dclicked',
-                                            editable=False,
-                                            adapter=pa)))
+        pg = UItem('qc_point_ids',
+                   editor=TabularEditor(selected='selected_qc_point_id',
+                                        dclicked='pane.dclicked',
+                                        editable=False,
+                                        adapter=pa))
+        dg = UItem('deviations', editor=TabularEditor(adapter=DeviationAdapter()))
+
+        v = View(VGroup(HGroup(UItem('pane.apply_qc_button'),
+                               UItem('pane.load_qc_button')),
+                        pg, dg))
         return v
 
 
