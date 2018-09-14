@@ -178,6 +178,19 @@ class DatabaseConnector(HasTraits):
             schema = etree.XMLSchema(xmlschema_doc)
             return schema
 
+    def apply_qc(self, pointid, limits, state=True):
+        mi, ma = limits
+        mi = datetime.fromtimestamp(mi).strftime('%m/%d/%Y %I:%M:%S %p')
+        ma = datetime.fromtimestamp(ma).strftime('%m/%d/%Y %I:%M:%S %p')
+
+        with self._get_cursor() as cursor:
+            cmd = 'Update dbo.WaterLevelsContinuous_Pressure ' \
+                  'Set QCed=%i ' \
+                  'Where DateMeasured>=%s and DateMeasured<=%s and PointID=%s'
+            args = (int(state), mi, ma, pointid)
+            print(cmd, args)
+            cursor.execute(cmd, args)
+
     def insert_continuous_water_levels(self, pointid, rows, with_update=False):
         """
         InsertWLCPressurePython

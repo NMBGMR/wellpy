@@ -184,7 +184,7 @@ class WellpyModel(HasTraits):
         self.load_qc()
 
     def apply_qc(self):
-        self._save_db(with_qc=True)
+        self._apply_qc()
 
     def get_continuous(self, name, qced=0):
         records = self.db.get_continuous_water_levels(name, qced=qced)
@@ -231,8 +231,10 @@ class WellpyModel(HasTraits):
             #     hs[i] = float(ri[3])
             #     ahs[i] = float(ri[4])
             #     ds[i] = float(ri[5])
-
             cxs, wts, hs, ahs, ds = args
+
+            self._qc_limits = min(cxs), max(cxs)
+
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, cxs)
             plot.data.set_data(DEPTH_Y, ds)
@@ -256,7 +258,7 @@ class WellpyModel(HasTraits):
             idx = where(cxs - mx < 60)[0]
             if idx.size:
                 idx = idx[-1]
-                dev = Deviation(idx=midx, time_s=idx, manual=my, continuous=cys[idx])
+                dev = Deviation(idx=midx, time_s=int(idx), manual=my, continuous=cys[idx])
                 devs.append(dev)
 
         self.deviations = devs
@@ -650,6 +652,14 @@ class WellpyModel(HasTraits):
         self.refresh_plot()
 
     # private
+    def _apply_qc(self):
+        # _, data = self._gather_data(with_qc=True)
+
+        pid = self.selected_qc_point_id.name
+        if YES == confirm(None, 'Are you sure you want to save QC status for {} to the database?'.format(pid)):
+            # pid = self.selected_point_id.name
+            self.db.apply_qc(pid, self._qc_limits)
+            information(None, 'QC status for {} saved to database'.format(pid))
 
     def _save_db(self, with_qc=False):
         _, data = self._gather_data(with_qc=with_qc)
