@@ -185,10 +185,9 @@ class DatabaseConnector(HasTraits):
 
         with self._get_cursor() as cursor:
             cmd = 'Update dbo.WaterLevelsContinuous_Pressure ' \
-                  'Set QCed=%i ' \
+                  'Set QCed=%d ' \
                   'Where DateMeasured>=%s and DateMeasured<=%s and PointID=%s'
             args = (int(state), mi, ma, pointid)
-            print(cmd, args)
             cursor.execute(cmd, args)
 
     def insert_continuous_water_levels(self, pointid, rows, with_update=False):
