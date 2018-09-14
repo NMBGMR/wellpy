@@ -81,7 +81,7 @@ def get_connection(h, u, p, n, *args, **kw):
 
 class SessionCTX:
     def __init__(self, h, u, p, n, *args, **kw):
-        conn = get_connection(h,u,p,n,*args,**kw)
+        conn = get_connection(h, u, p, n, *args, **kw)
         self._conn = conn
 
     def __enter__(self):
@@ -152,21 +152,14 @@ class DatabaseConnector(HasTraits):
 
     def get_point_ids_simple(self):
         with self._get_cursor() as cursor:
-            cmd='''SELECT DISTINCT PointID FROM dbo.Equipment
-            WHERE PointID 
-            IS
-            NOT
-            NULL
-            AND(EquipmentType
-            LIKE
-            'pressure%') ORDER
-            BY[PointID]'''
+            cmd = '''SELECT DISTINCT PointID FROM dbo.Equipment
+            WHERE PointID IS NOT NULL
+            AND(EquipmentType LIKE 'pressure%') 
+            ORDER BY[PointID]'''
 
             cursor.execute(cmd)
 
             return [PointIDRecord(*r) for r in cursor.fetchall()]
-
-            # return sorted([PointIDRecord(*r) for r in cursor.fetchall()], key=lambda x: x.name)
 
     def get_qc_point_ids(self, qced=False):
         with self._get_cursor() as cursor:
@@ -245,19 +238,19 @@ class DatabaseConnector(HasTraits):
             chunk_len = 300
             ntries = 2
             cursor = conn.cursor()
-            cn = n/chunk_len+1
+            cn = n / chunk_len + 1
             for i in xrange(0, n, chunk_len):
                 print 'Insert chunk:  {}/{}'.format(i, cn)
-                #pd.change_message('Insert chunk:  {}/{}'.format(i, cn))
+                # pd.change_message('Insert chunk:  {}/{}'.format(i, cn))
                 # pd.update(i)
-                chunk = rows[i:i+chunk_len]
+                chunk = rows[i:i + chunk_len]
                 values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'), temp, a, ah, bgs, note)
                           for x, a, ah, bgs, temp in chunk]
                 for j in xrange(ntries):
                     try:
                         cursor.executemany(cmd, values)
                     except:
-                        print 'need to retry', j+1
+                        print 'need to retry', j + 1
                         time.sleep(2)
                         continue
 
@@ -345,8 +338,10 @@ class DatabaseConnector(HasTraits):
 
     def _get_cursor(self):
         return SessionCTX(self._host, self._user, self._password, self._dbname)
+
     def _get_connection(self):
         return get_connection(self._host, self._user, self._password, self._dbname)
+
 
 if __name__ == '__main__':
     d = DatabaseConnector(bind=False)

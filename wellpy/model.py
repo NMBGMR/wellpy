@@ -251,18 +251,12 @@ class WellpyModel(HasTraits):
                       marker='circle', marker_size=2.5,
                       type='scatter', color='yellow')
 
-            foreign_plot = create_line_plot((ocxs, ohs), color='blue')
-            left, bottom = add_default_axes(foreign_plot)
-            left.orientation = "right"
-            bottom.orientation = "top"
-            plot.add(foreign_plot)
-
-            self._broadcast_zoom(plot, foreign_plot)
+            self._add_head(plot, ocxs, ohs)
 
             self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
 
-    def load_qc_data(self, as_viewer=False):
+    def load_qc_data(self):
         pid = self.selected_qc_point_id
         if pid is None:
             return
@@ -291,19 +285,23 @@ class WellpyModel(HasTraits):
                       type='scatter', color='yellow')
 
             # plot.plot((DEPTH_X, HEAD_Y), color='blue')
-
-            foreign_plot = create_line_plot((cxs, hs), color='blue')
-            left, bottom = add_default_axes(foreign_plot)
-            left.orientation = "right"
-            bottom.orientation = "top"
-            plot.add(foreign_plot)
-
-            self._broadcast_zoom(plot, foreign_plot)
-
+            self._add_head()
             self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
         else:
             information(None, 'No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
+
+    def _add_head(self, plot, cxs, hs):
+        foreign_plot = create_line_plot((cxs, hs), color='blue')
+        left, bottom = add_default_axes(foreign_plot)
+        left.orientation = "right"
+        bottom.orientation = "top"
+
+        foreign_plot.index_mapper = plot.index_mapper
+
+        plot.add(foreign_plot)
+
+        self._broadcast_zoom(plot, foreign_plot)
 
     def _broadcast_zoom(self, plot, foreign_plot):
         zoom = plot.plots['plot0'][0].overlays.pop(1)
