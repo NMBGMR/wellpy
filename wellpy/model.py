@@ -16,6 +16,8 @@
 import os
 import time
 from datetime import datetime
+
+from chaco.plot_factory import add_default_axes, create_line_plot
 from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
     ones_like, zeros, delete
 
@@ -71,6 +73,8 @@ DEPTH_SENSOR_X = 'depth_sensor_x'
 
 DEPTH_Y = 'depth_y'
 DEPTH_X = 'depth_x'
+
+HEAD_Y = 'head_y'
 
 EXISTING_DEPTH_Y = 'existing_depth_y'
 EXISTING_DEPTH_X = 'exisiting_depth_x'
@@ -238,6 +242,7 @@ class WellpyModel(HasTraits):
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, cxs)
             plot.data.set_data(DEPTH_Y, ds)
+            # plot.data.set_data(HEAD_Y, hs)
 
             xs, ys, ss = self.get_manual_measurements(pid.name)
 
@@ -246,6 +251,14 @@ class WellpyModel(HasTraits):
             plot.plot((QC_MANUAL_X, QC_MANUAL_Y),
                       marker='circle', marker_size=2.5,
                       type='scatter', color='yellow')
+
+            # plot.plot((DEPTH_X, HEAD_Y), color='blue')
+
+            foreign_plot = create_line_plot((cxs, hs), color='blue')
+            left, bottom = add_default_axes(foreign_plot)
+            left.orientation = "right"
+            bottom.orientation = "top"
+            plot.add(foreign_plot)
 
             self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
@@ -589,7 +602,7 @@ class WellpyModel(HasTraits):
         self.plot_container = container = self._new_plotcontainer()
         self._plots = {}
 
-        padding = [90, 10, 5, 5]
+        padding = [90, 50, 5, 5]
 
         if qc:
             funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),)
