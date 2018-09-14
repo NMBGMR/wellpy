@@ -18,6 +18,7 @@ import time
 from datetime import datetime
 
 from chaco.plot_factory import add_default_axes, create_line_plot
+from chaco.tools.broadcaster import BroadcasterTool
 from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
     ones_like, zeros, delete
 
@@ -79,8 +80,8 @@ HEAD_Y = 'head_y'
 EXISTING_DEPTH_Y = 'existing_depth_y'
 EXISTING_DEPTH_X = 'exisiting_depth_x'
 
-QC_DEPTH_Y = 'depth_y'
-QC_DEPTH_X = 'depth_x'
+QC_DEPTH_Y = 'qc_depth_y'
+QC_DEPTH_X = 'qc_depth_x'
 
 WATER_HEAD = 'water_head'
 ADJ_WATER_HEAD = 'adjusted_water_head'
@@ -141,6 +142,9 @@ class WellpyModel(HasTraits):
 
     qc_point_ids = List
     selected_qc_point_id = Instance(PointIDRecord)
+    selected_viewer_point_id = Instance(PointIDRecord)
+    viewer_point_ids = List
+
     dclick_qc_point_id = Any
 
     path = Str
@@ -186,6 +190,7 @@ class WellpyModel(HasTraits):
             self.point_id_entry = os.environ.get('POINTID_DEBUG', 'SO-0227')
 
         self.load_qc()
+        self.load_viewer()
 
     def apply_qc(self):
         self._apply_qc()
@@ -208,6 +213,46 @@ class WellpyModel(HasTraits):
                 ahs[i] = float(ri[4])
                 ds[i] = float(ri[5])
             return xs, wts, hs, ahs, ds
+
+    def load_viewer_data(self):
+        pid = self.selected_viewer_point_id
+        if pid is None:
+            return
+
+        nqc_args = self.get_continuous(pid.name, qced=0)
+        args = self.get_continuous(pid.name, qced=1)
+        if args or nqc_args:
+            self.initialize_plot(qc=True)
+            """
+            PointID, Timestamp, 'temp', 'head', 'adjusted_head', 'depth_to_water'', note
+            """
+            plot = self._plots[DEPTH_TO_WATER]
+            if args:
+                cxs, wts, hs, ahs, ds = args
+                plot.data.set_data(QC_DEPTH_X, cxs)
+                plot.data.set_data(QC_DEPTH_Y, ds)
+
+            if nqc_args:
+                cxs, wts, hs, ahs, ds = nqc_args
+                plot.data.set_data(DEPTH_X, cxs)
+                plot.data.set_data(DEPTH_Y, ds)
+
+            xs, ys, ss = self.get_manual_measurements(pid.name)
+
+            plot.data.set_data(QC_MANUAL_X, xs)
+            plot.data.set_data(QC_MANUAL_Y, ys)
+            plot.plot((QC_MANUAL_X, QC_MANUAL_Y),
+                      marker='circle', marker_size=2.5,
+                      type='scatter', color='yellow')
+
+            foreign_plot = create_line_plot((cxs, hs), color='blue')
+            left, bottom = add_default_axes(foreign_plot)
+            left.orientation = "right"
+            bottom.orientation = "top"
+            plot.add(foreign_plot)
+
+            self._calculate_deviations(xs, ys, cxs, ds)
+            self.refresh_plot()
 
     def load_qc_data(self):
         pid = self.selected_qc_point_id
@@ -242,6 +287,9 @@ class WellpyModel(HasTraits):
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, cxs)
             plot.data.set_data(DEPTH_Y, ds)
+
+            zoom = plot.plots['plot0'][0].overlays.pop(1)
+
             # plot.data.set_data(HEAD_Y, hs)
 
             xs, ys, ss = self.get_manual_measurements(pid.name)
@@ -260,6 +308,20 @@ class WellpyModel(HasTraits):
             bottom.orientation = "top"
             plot.add(foreign_plot)
 
+            fz = ZoomTool(component=foreign_plot,
+                         enable_wheel=True,
+                         alpha=0.3,
+                         axis='index',
+                         always_on=False, tool_mode='range',
+                         max_zoom_out_factor=1,
+                         max_zoom_in_factor=10000)
+
+            broadcaster = BroadcasterTool()
+            broadcaster.tools.append(zoom)
+            broadcaster.tools.append(fz)
+
+            plot.tools.append(broadcaster)
+
             self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
         else:
@@ -277,6 +339,9 @@ class WellpyModel(HasTraits):
                 devs.append(dev)
 
         self.deviations = devs
+
+    def load_viewer(self):
+        self.viewer_point_ids = self.db.get_point_ids()
 
     def load_qc(self):
         self.qc_point_ids = self.db.get_qc_point_ids()

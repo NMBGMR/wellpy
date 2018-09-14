@@ -225,6 +225,28 @@ class QCPane(TraitsDockPane):
         return v
 
 
+class ViewerPane(TraitsDockPane):
+    id = 'wellpy.viewer.pane'
+    name = 'Viewer'
+    dclicked = Event
+
+    def _dclicked_fired(self):
+        self.model.load_viewer_data()
+
+    def traits_view(self):
+        pa = PointIDAdapter()
+        pa.columns = pa.columns[:1]
+        dg = UItem('deviations', editor=TabularEditor(adapter=DeviationAdapter()))
+        pg = UItem('viewer_point_ids',
+                   editor=TabularEditor(selected='selected_viewer_point_id',
+                                        dclicked='pane.dclicked',
+                                        editable=False,
+                                        adapter=pa))
+
+        v = View(VGroup(pg, dg))
+        return v
+
+
 class WellPane(TraitsDockPane):
     id = 'wellpy.well.pane'
     name = 'Well'

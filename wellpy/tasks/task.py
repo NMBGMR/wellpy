@@ -28,7 +28,7 @@ from globals import DATABSE_DEBUG
 from wellpy.database_connector import DatabaseConnector
 from wellpy.model import WellpyModel
 from wellpy.tasks.actions import ResetLayoutAction
-from wellpy.tasks.panes import WellPane, WellCentralPane, ToolboxPane, AutoResultsPane, QCPane
+from wellpy.tasks.panes import WellPane, WellCentralPane, ToolboxPane, AutoResultsPane, QCPane, ViewerPane
 
 
 class WellpyTask(Task):
@@ -50,12 +50,14 @@ class WellpyTask(Task):
         return [WellPane(model=self.model),
                 ToolboxPane(model=self.model),
                 AutoResultsPane(model=self.model),
-                QCPane(model=self.model)]
+                QCPane(model=self.model),
+                ViewerPane(model=self.model)]
 
     def _default_layout_default(self):
         return TaskLayout(left=VSplitter(PaneItem('wellpy.well.pane'),
                                          Tabbed(PaneItem('wellpy.toolbox.pane'),
-                                                PaneItem('wellpy.qc.pane'))),
+                                                PaneItem('wellpy.qc.pane'),
+                                                PaneItem('wellpy.viewer.pane'))),
                           bottom=PaneItem('wellpy.autoresults.pane'))
 
     def _menu_bar_factory(self, menus=None):

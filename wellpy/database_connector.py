@@ -147,8 +147,22 @@ class DatabaseConnector(HasTraits):
 
     def get_point_ids(self):
         with self._get_cursor() as cursor:
+            cmd='''SELECT DISTINCT PointID FROM dbo.Equipment
+            WHERE PointID 
+            IS
+            NOT
+            NULL
+            AND(EquipmentType
+            LIKE
+            'pressure%') ORDER
+            BY[PointID]'''
+
             cursor.execute('GetPointIDsPython')
-            return sorted([PointIDRecord(*r) for r in cursor.fetchall()], key=lambda x: x.name)
+            cursor.execute(cmd)
+
+            return [PointIDRecord(*r) for r in cursor.fetchall()]
+
+            # return sorted([PointIDRecord(*r) for r in cursor.fetchall()], key=lambda x: x.name)
 
     def get_qc_point_ids(self, qced=False):
         with self._get_cursor() as cursor:
