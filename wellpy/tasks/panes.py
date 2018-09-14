@@ -170,7 +170,7 @@ class AutoResultsPane(TraitsDockPane):
 
 
 class DeviationAdapter(TabularAdapter):
-    columns = [('Time', 'time_s'),
+    columns = [('Time', 'timestamp'),
                ('Manual Index', 'idx'),
                ('Deviation', 'deviation'),
                ('Manual', 'manual'),

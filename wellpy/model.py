@@ -258,7 +258,9 @@ class WellpyModel(HasTraits):
             idx = where(cxs - mx < 60)[0]
             if idx.size:
                 idx = idx[-1]
-                dev = Deviation(idx=midx, time_s=int(idx), manual=my, continuous=cys[idx])
+                dev = Deviation(idx=midx, time_s=int(idx),
+                                timestamp=datetime.fromtimestamp(mx).strftime('%m/%d/%Y'),
+                                manual=my, continuous=cys[idx])
                 devs.append(dev)
 
         self.deviations = devs
