@@ -285,7 +285,7 @@ class WellpyModel(HasTraits):
                       type='scatter', color='yellow')
 
             # plot.plot((DEPTH_X, HEAD_Y), color='blue')
-            self._add_head()
+            self._add_head(plot, cxs, hs)
             self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
         else:
