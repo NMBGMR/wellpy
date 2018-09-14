@@ -227,15 +227,21 @@ class WellpyModel(HasTraits):
             PointID, Timestamp, 'temp', 'head', 'adjusted_head', 'depth_to_water'', note
             """
             plot = self._plots[DEPTH_TO_WATER]
+            ocxs = []
+            ohs = []
             if args:
                 cxs, wts, hs, ahs, ds = args
                 plot.data.set_data(QC_DEPTH_X, cxs)
                 plot.data.set_data(QC_DEPTH_Y, ds)
+                ocxs.extend(cxs)
+                ohs.extend(hs)
 
             if nqc_args:
                 cxs, wts, hs, ahs, ds = nqc_args
                 plot.data.set_data(DEPTH_X, cxs)
                 plot.data.set_data(DEPTH_Y, ds)
+                ocxs.extend(cxs)
+                ohs.extend(hs)
 
             xs, ys, ss = self.get_manual_measurements(pid.name)
 
@@ -245,16 +251,18 @@ class WellpyModel(HasTraits):
                       marker='circle', marker_size=2.5,
                       type='scatter', color='yellow')
 
-            foreign_plot = create_line_plot((cxs, hs), color='blue')
+            foreign_plot = create_line_plot((ocxs, ohs), color='blue')
             left, bottom = add_default_axes(foreign_plot)
             left.orientation = "right"
             bottom.orientation = "top"
             plot.add(foreign_plot)
 
+            self._broadcast_zoom(plot, foreign_plot)
+
             self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
 
-    def load_qc_data(self):
+    def load_qc_data(self, as_viewer=False):
         pid = self.selected_qc_point_id
         if pid is None:
             return
@@ -266,20 +274,7 @@ class WellpyModel(HasTraits):
             """
             PointID, Timestamp, 'temp', 'head', 'adjusted_head', 'depth_to_water'', note
             """
-            # n = len(records)
-            #
-            # xs = zeros(n)
-            # hs = zeros(n)
-            # ahs = zeros(n)
-            # ds = zeros(n)
-            # wts = zeros(n)
-            # for i, ri in enumerate(sorted(records, key=lambda x: x[1])):
-            #     x = time.mktime(ri[1].timetuple())
-            #     xs[i] = x
-            #     wts[i] = float(ri[2])
-            #     hs[i] = float(ri[3])
-            #     ahs[i] = float(ri[4])
-            #     ds[i] = float(ri[5])
+
             cxs, wts, hs, ahs, ds = args
 
             self._qc_limits = min(cxs), max(cxs)
@@ -287,11 +282,6 @@ class WellpyModel(HasTraits):
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, cxs)
             plot.data.set_data(DEPTH_Y, ds)
-
-            zoom = plot.plots['plot0'][0].overlays.pop(1)
-
-            # plot.data.set_data(HEAD_Y, hs)
-
             xs, ys, ss = self.get_manual_measurements(pid.name)
 
             plot.data.set_data(QC_MANUAL_X, xs)
@@ -308,24 +298,28 @@ class WellpyModel(HasTraits):
             bottom.orientation = "top"
             plot.add(foreign_plot)
 
-            fz = ZoomTool(component=foreign_plot,
-                         enable_wheel=True,
-                         alpha=0.3,
-                         axis='index',
-                         always_on=False, tool_mode='range',
-                         max_zoom_out_factor=1,
-                         max_zoom_in_factor=10000)
-
-            broadcaster = BroadcasterTool()
-            broadcaster.tools.append(zoom)
-            broadcaster.tools.append(fz)
-
-            plot.tools.append(broadcaster)
+            self._broadcast_zoom(plot, foreign_plot)
 
             self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
         else:
             information(None, 'No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
+
+    def _broadcast_zoom(self, plot, foreign_plot):
+        zoom = plot.plots['plot0'][0].overlays.pop(1)
+        fz = ZoomTool(component=foreign_plot,
+                      enable_wheel=True,
+                      alpha=0.3,
+                      axis='index',
+                      always_on=False, tool_mode='range',
+                      max_zoom_out_factor=1,
+                      max_zoom_in_factor=10000)
+
+        broadcaster = BroadcasterTool()
+        broadcaster.tools.append(zoom)
+        broadcaster.tools.append(fz)
+
+        plot.tools.append(broadcaster)
 
     def _calculate_deviations(self, mxs, mys, cxs, cys):
         devs = []
@@ -341,7 +335,7 @@ class WellpyModel(HasTraits):
         self.deviations = devs
 
     def load_viewer(self):
-        self.viewer_point_ids = self.db.get_point_ids()
+        self.viewer_point_ids = self.db.get_point_ids_simple()
 
     def load_qc(self):
         self.qc_point_ids = self.db.get_qc_point_ids()
