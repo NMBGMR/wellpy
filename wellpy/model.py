@@ -324,7 +324,7 @@ class WellpyModel(HasTraits):
         broadcaster = BroadcasterTool()
         broadcaster.tools.append(zoom)
         broadcaster.tools.append(fz)
-
+        foreign_plot.overlays.append(fz)
         plot.tools.append(broadcaster)
 
     def _calculate_deviations(self, mxs, mys, cxs, cys):
