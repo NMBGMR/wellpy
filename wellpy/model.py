@@ -291,6 +291,14 @@ class WellpyModel(HasTraits):
         else:
             information(None, 'No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
 
+    def set_head_visibility(self, state):
+        try:
+            plot = self._plots['HEAD']
+            plot.visible = state
+            plot.request_redraw()
+        except KeyError:
+            pass
+
     def _add_head(self, plot, cxs, hs):
         foreign_plot = create_line_plot((cxs, hs), color='blue')
         left, bottom = add_default_axes(foreign_plot)
@@ -300,7 +308,7 @@ class WellpyModel(HasTraits):
         foreign_plot.index_mapper = plot.index_mapper
 
         plot.add(foreign_plot)
-
+        self._plots['HEAD'] = foreign_plot
         self._broadcast_zoom(plot, foreign_plot)
 
     def _broadcast_zoom(self, plot, foreign_plot):

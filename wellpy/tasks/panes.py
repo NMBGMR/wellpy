@@ -198,6 +198,7 @@ class QCPane(TraitsDockPane):
 
     load_qc_button = Button('Refresh QC Needed')
     dclicked = Event
+    head_visible = Bool(True)
 
     def _dclicked_fired(self):
         self.model.load_qc_data()
@@ -207,6 +208,9 @@ class QCPane(TraitsDockPane):
 
     def _load_qc_button_fired(self):
         self.model.load_qc()
+
+    def _head_visible_changed(self, new):
+        self.model.set_head_visibility(new)
 
     def traits_view(self):
         pa = PointIDAdapter()
@@ -220,7 +224,8 @@ class QCPane(TraitsDockPane):
         dg = UItem('deviations', editor=TabularEditor(adapter=DeviationAdapter()))
 
         v = View(VGroup(HGroup(UItem('pane.apply_qc_button'),
-                               UItem('pane.load_qc_button')),
+                               UItem('pane.load_qc_button'),
+                               Item('pane.head_visible', label='Show Head')),
                         pg, dg))
         return v
 
