@@ -230,21 +230,29 @@ class DatabaseConnector(HasTraits):
                     args = (pointid, datemeasured, temp, a, ah, bgs, note)
                     cursor.execute(cmd, args)
         else:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+
+            # retrieve wellid
+            cmd = '''Select WellID from dbo.WellData where PointID=%s'''
+            cursor.execute(cmd, pointid)
+            wellid = cursor.fetchone()[0]
+
             cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure
                      (PointID, DateMeasured, TemperatureWater, WaterHead, 
-                       WaterHeadAdjusted, DepthToWaterBGS, Notes)
-                     VALUES (%s, %s, %d, %d, %d, %d, %s)'''
-            conn = self._get_connection()
+                       WaterHeadAdjusted, DepthToWaterBGS, Notes, WellID)
+                     VALUES (%s, %s, %d, %d, %d, %d, %s, %s)'''
+
             chunk_len = 300
             ntries = 2
-            cursor = conn.cursor()
             cn = n / chunk_len + 1
             for i in xrange(0, n, chunk_len):
                 print 'Insert chunk:  {}/{}'.format(i, cn)
                 # pd.change_message('Insert chunk:  {}/{}'.format(i, cn))
                 # pd.update(i)
                 chunk = rows[i:i + chunk_len]
-                values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'), temp, a, ah, bgs, note)
+                values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
+                           temp, a, ah, bgs, note, wellid)
                           for x, a, ah, bgs, temp in chunk]
                 for j in xrange(ntries):
                     try:
