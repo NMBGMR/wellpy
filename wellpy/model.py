@@ -16,6 +16,8 @@
 import os
 import time
 from datetime import datetime
+from itertools import groupby
+from operator import itemgetter
 
 from chaco.plot_factory import add_default_axes, create_line_plot
 from chaco.tools.broadcaster import BroadcasterTool
@@ -37,7 +39,7 @@ from pyface.confirmation_dialog import confirm
 from pyface.constant import YES
 from pyface.file_dialog import FileDialog
 from pyface.message_dialog import information, warning
-from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int, Any
+from traits.api import HasTraits, Instance, Float, List, Property, Str, Button, Int, Any, Bool
 
 from wellpy.axistool import AxisTool
 from wellpy.data_model import DataModel
@@ -165,6 +167,7 @@ class WellpyModel(HasTraits):
     scroll_to_row = Int
 
     deviations = List(Deviation)
+    use_daily_mins = Bool(False)
 
     def activated(self):
         if DATABSE_DEBUG:
@@ -205,13 +208,38 @@ class WellpyModel(HasTraits):
             ahs = zeros(n)
             ds = zeros(n)
             wts = zeros(n)
-            for i, ri in enumerate(sorted(records, key=lambda x: x[1])):
+            # records = sorted(records, key=lambda x: x[1])
+            records = sorted(records, key=itemgetter(1))
+
+            # if self.use_daily_mins:
+            #     xs, wts, hs, ahs, ds = [], [], [], [], []
+            #     for day, records in groupby(records, key=itemgetter(1)):
+            #         records = list(records)
+            #         ri = records[0]
+            #         x = time.mktime(ri[1].timetuple())
+            #         xs.append(x)
+            #
+            #         wtss = [r[2] for r in records]
+            #         hss = [r[3] for r in records]
+            #         ahss = [r[4] for r in records]
+            #         dss = [r[5] for r in records]
+            #
+            #         ah = min(ahss)
+            #         idx = ahss.index(ah)
+            #
+            #         hs.append(hss[idx])
+            #         wts.append(wtss[idx])
+            #         ahs.append(ah)
+            #         ds.append(dss[idx])
+
+            for i, ri in enumerate(records):
                 x = time.mktime(ri[1].timetuple())
                 xs[i] = x
                 wts[i] = float(ri[2])
                 hs[i] = float(ri[3])
                 ahs[i] = float(ri[4])
                 ds[i] = float(ri[5])
+
             return xs, wts, hs, ahs, ds
 
     def load_viewer_data(self):
@@ -951,6 +979,33 @@ class WellpyModel(HasTraits):
         pc = VPlotContainer()
         pc.bgcolor = 'lightblue'
         return pc
+
+    def _use_daily_mins_changed(self, new):
+        plot = self._plots[ADJ_WATER_HEAD]
+        data =self.data_model
+        x = data.x
+        y = data.adjusted_water_head
+        if new:
+            records = zip(x,y)
+            xs, ys = [], []
+            ds = 24 * 3600
+            for day, records in groupby(records, key=lambda x: int(x[0] / ds)):
+                records = list(records)
+                # ri = records[0]
+                # x = time.mktime(ri[0].timetuple())
+                vs = [r[1] for r in records]
+                y = min(vs)
+                idx = vs.index(y)
+                x = [r[0] for r in records][idx]
+                xs.append(x)
+                ys.append(y)
+
+        else:
+            xs,ys = x, y
+
+        plot.data.set_data(ADJUSTED_WATER_HEAD_X, xs)
+        plot.data.set_data(ADJUSTED_WATER_HEAD_Y, ys)
+        plot.invalidate_and_redraw()
 
     def _plot_container_default(self):
         pc = self._new_plotcontainer()

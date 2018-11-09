@@ -131,6 +131,7 @@ class ToolboxPane(TraitsDockPane):
                                  UItem('pane.fix_adj_head_data_button', tooltip='Automatically remove offsets greater '
                                                                                 'than "Threshold"'),
                                  UItem('pane.undo_button')),
+                          Item('use_daily_mins'),
                           show_border=True, label='Adjusted Head')
 
         calculate_grp = VGroup(HGroup(Item('pane.correct_drift'),
