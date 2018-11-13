@@ -168,6 +168,7 @@ class WellpyModel(HasTraits):
 
     deviations = List(Deviation)
     use_daily_mins = Bool(False)
+    viewer_use_daily_mins = Bool(False)
 
     def activated(self):
         if DATABSE_DEBUG:
@@ -201,46 +202,51 @@ class WellpyModel(HasTraits):
     def get_continuous(self, name, qced=0):
         records = self.db.get_continuous_water_levels(name, qced=qced)
         if records:
-            n = len(records)
-
-            xs = zeros(n)
-            hs = zeros(n)
-            ahs = zeros(n)
-            ds = zeros(n)
-            wts = zeros(n)
             # records = sorted(records, key=lambda x: x[1])
             records = sorted(records, key=itemgetter(1))
 
-            # if self.use_daily_mins:
-            #     xs, wts, hs, ahs, ds = [], [], [], [], []
-            #     for day, records in groupby(records, key=itemgetter(1)):
-            #         records = list(records)
-            #         ri = records[0]
-            #         x = time.mktime(ri[1].timetuple())
-            #         xs.append(x)
-            #
-            #         wtss = [r[2] for r in records]
-            #         hss = [r[3] for r in records]
-            #         ahss = [r[4] for r in records]
-            #         dss = [r[5] for r in records]
-            #
-            #         ah = min(ahss)
-            #         idx = ahss.index(ah)
-            #
-            #         hs.append(hss[idx])
-            #         wts.append(wtss[idx])
-            #         ahs.append(ah)
-            #         ds.append(dss[idx])
+            if self.viewer_use_daily_mins:
+                xs, wts, hs, ahs, ds = [], [], [], [], []
+                # for day, records in groupby(records, key=itemgetter(1)):
+                for day, records in groupby(records, key=lambda x: x[1].date()):
+                    records = list(records)
+                    ri = records[0]
+                    x = time.mktime(ri[1].timetuple())
+                    xs.append(x)
 
-            for i, ri in enumerate(records):
-                x = time.mktime(ri[1].timetuple())
-                xs[i] = x
-                wts[i] = float(ri[2])
-                hs[i] = float(ri[3])
-                ahs[i] = float(ri[4])
-                ds[i] = float(ri[5])
+                    wtss = [r[2] for r in records]
+                    hss = [r[3] for r in records]
+                    ahss = [r[4] for r in records]
+                    dss = [r[5] for r in records]
+
+                    ah = min(ahss)
+                    idx = ahss.index(ah)
+
+                    hs.append(hss[idx])
+                    wts.append(wtss[idx])
+                    ahs.append(ah)
+                    ds.append(dss[idx])
+            else:
+                n = len(records)
+
+                xs = zeros(n)
+                hs = zeros(n)
+                ahs = zeros(n)
+                ds = zeros(n)
+                wts = zeros(n)
+
+                for i, ri in enumerate(records):
+                    x = time.mktime(ri[1].timetuple())
+                    xs[i] = x
+                    wts[i] = float(ri[2])
+                    hs[i] = float(ri[3])
+                    ahs[i] = float(ri[4])
+                    ds[i] = float(ri[5])
 
             return xs, wts, hs, ahs, ds
+
+    def _viewer_use_daily_mins_changed(self, new):
+        self.load_viewer_data()
 
     def load_viewer_data(self):
         pid = self.selected_viewer_point_id

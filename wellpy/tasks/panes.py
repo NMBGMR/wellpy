@@ -249,7 +249,8 @@ class ViewerPane(TraitsDockPane):
                                         editable=False,
                                         adapter=pa))
 
-        v = View(VGroup(pg, dg))
+        v = View(VGroup(HGroup(Item('viewer_use_daily_mins', label='Use Daily Mins')),
+                        pg, dg))
         return v
 
 
