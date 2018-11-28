@@ -874,9 +874,9 @@ class WellpyModel(HasTraits):
         plot = self._plot_factory(pd, padding=padding, origin='top left')
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
 
-        line = plot.plot((DEPTH_X, DEPTH_Y))[0]
-        line2 = plot.plot((EXISTING_DEPTH_X, EXISTING_DEPTH_Y), color='blue')[0]
-        line3 = plot.plot((QC_DEPTH_X, QC_DEPTH_Y), color='green')[0]
+        line = plot.plot((DEPTH_X, DEPTH_Y), color='green')[0]
+        line2 = plot.plot((EXISTING_DEPTH_X, EXISTING_DEPTH_Y), color='red')[0]
+        line3 = plot.plot((QC_DEPTH_X, QC_DEPTH_Y), color='black')[0]
 
         dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
         dto = DataToolOverlay(component=line, tool=dt)
