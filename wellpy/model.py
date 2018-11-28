@@ -469,9 +469,17 @@ class WellpyModel(HasTraits):
         return xs, ys, ss
 
     def plot_existing_continuous(self, name):
-        args = self.get_continuous(name)
+        args = self.get_continuous(name, qced=1)
         if args:
             xs, wts, hs, ahs, ds = args
+
+            plot = self._plots[DEPTH_TO_WATER]
+            plot.data.set_data(QC_DEPTH_X, xs)
+            plot.data.set_data(QC_DEPTH_Y, ds)
+
+        nargs = self.get_continuous(name)
+        if nargs:
+            xs, wts, hs, ahs, ds = nargs
 
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(EXISTING_DEPTH_X, xs)
@@ -867,7 +875,7 @@ class WellpyModel(HasTraits):
         plot.y_axis.title = DEPTH_TO_WATER_TITLE
 
         line = plot.plot((DEPTH_X, DEPTH_Y))[0]
-        line2 = plot.plot((EXISTING_DEPTH_X, EXISTING_DEPTH_Y), color='red')[0]
+        line2 = plot.plot((EXISTING_DEPTH_X, EXISTING_DEPTH_Y), color='blue')[0]
         line3 = plot.plot((QC_DEPTH_X, QC_DEPTH_Y), color='green')[0]
 
         dt = DataTool(plot=line, component=plot, normalize_time=False, use_date_str=True)
