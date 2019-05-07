@@ -239,9 +239,9 @@ class DatabaseConnector(HasTraits):
             wellid = cursor.fetchone()[0]
 
             cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure
-                     (PointID, DateMeasured, TemperatureWater, WaterHead, 
+                     (PointID, DateMeasured, TemperatureWater, CONDDL, WaterHead, 
                        WaterHeadAdjusted, DepthToWaterBGS, Notes, WellID)
-                     VALUES (%s, %s, %d, %d, %d, %d, %s, %s)'''
+                     VALUES (%s, %s, %d, %d, %d, %d, %d, %s, %s)'''
 
             chunk_len = 300
             ntries = 2
@@ -252,8 +252,8 @@ class DatabaseConnector(HasTraits):
                 # pd.update(i)
                 chunk = rows[i:i + chunk_len]
                 values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
-                           temp, a, ah, bgs, note, wellid)
-                          for x, a, ah, bgs, temp in chunk]
+                           temp, cond, a, ah, bgs, note, wellid)
+                          for x, a, ah, bgs, temp, cond in chunk]
                 for j in xrange(ntries):
                     try:
                         cursor.executemany(cmd, values)

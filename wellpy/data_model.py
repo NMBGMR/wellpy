@@ -41,6 +41,7 @@ class DataModel:
     depth_to_water_x = None
     depth_to_water_y = None
     water_temp = None
+    cond = None
 
     def __init__(self, path):
         self._path = path
@@ -99,13 +100,13 @@ class DataModel:
                 # for sidx, eidx in idxs.reshape(n / 2, 2):
                 for sidx in idxs:
                     # sidx, eidx = idxs[0], idxs[1]
-                    eidx = sidx+1
+                    eidx = sidx + 1
                     sx, ex = x[sidx], x[eidx]
                     # print 'sxex', sx, ex
                     if sx >= selection[0] and ex <= selection[1]:
                         offset = ys[sidx] - ys[eidx]
                         fs.append((offset, sidx, eidx, sx, ex))
-                        ys[sidx+1:] += offset
+                        ys[sidx + 1:] += offset
         else:
             while 1:
                 idxs = where(abs(diff(ys)) >= threshold)[0]
@@ -135,6 +136,7 @@ class DataModel:
         x = []
         ws = []
         ts = []
+        cs = []
         fmts = ('%Y/%m/%d %H:%M:%S',
                 '%Y/%m/%d %H:%M',
                 '%m/%d/%Y %H:%M:%S',
@@ -157,16 +159,14 @@ class DataModel:
 
                 if i < 53:
                     continue
-                try:
+
+                if len(line) == 3:
                     date, water_head, temp = line
-                except ValueError:
+                elif len(line) == 4:
+                    date, water_head, temp, cond = line
+                else:
                     if oline.startswith('END OF DATA'):
                         break
-
-                    try:
-                        date, water_head, temp = line[:3]
-                    except ValueError:
-                        continue
 
                 try:
                     water_head = float(water_head)
@@ -174,7 +174,11 @@ class DataModel:
                     continue
                 try:
                     temp = float(temp)
-                except TypeError:
+                except (ValueError, TypeError):
+                    continue
+                try:
+                    cond = float(cond)
+                except (ValueError, TypeError):
                     continue
 
                 if not cfmt:
@@ -195,6 +199,7 @@ class DataModel:
                 x.append(time.mktime(date.timetuple()))
                 ws.append(water_head)
                 ts.append(temp)
+                cs.append(cond)
 
         self.x = array(x)
 
@@ -204,6 +209,7 @@ class DataModel:
         self._owater_head = ws
         self.water_head = array(ws)
         self.adjusted_water_head = array(ws)
+        self.cond = array(cs)
 
     def _load_xls(self, p):
         wb = load_workbook(p, data_only=True)

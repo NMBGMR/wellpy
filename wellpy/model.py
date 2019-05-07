@@ -843,14 +843,16 @@ class WellpyModel(HasTraits):
         ah = model.adjusted_water_head
         h = model.water_head
         water_temp = model.water_temp
+        cond = model.cond
 
         if use_isoformat:
             x = [datetime.fromtimestamp(xi).isoformat() for xi in x]
         elif use_excel_format:
             x = [datetime.fromtimestamp(xi).strftime('%m/%d/%Y %H:%M') for xi in x]
 
-        args = (x, h, ah, depth_to_water, water_temp)
-        keys = ('date/time', 'head (ft)', 'adjusted head (ft)', 'Depth to water (ft bgs)', 'water_temp (C)')
+        args = (x, h, ah, depth_to_water, water_temp, cond)
+        keys = ('date/time', 'head (ft)', 'adjusted head (ft)', 'Depth to water (ft bgs)', 'water_temp (C)',
+                'cond (mS/cm)')
         if with_qc:
             args = args + (ones_like(x),)
             keys = keys + ('qc',)
