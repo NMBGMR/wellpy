@@ -269,7 +269,9 @@ class WellPane(TraitsDockPane):
             self.model.path = FILE_DEBUG
             self.model.load_file(FILE_DEBUG)
         else:
-            dlg = FileDialog(action='open', default_directory=os.path.expanduser('~'))
+            path = os.path.expanduser('~')
+            path = os.path.join(path, 'DataLoggers')
+            dlg = FileDialog(action='open', default_directory=path)
 
             if dlg.open() == OK:
                 if os.path.isfile(dlg.path):

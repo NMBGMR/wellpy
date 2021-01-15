@@ -311,7 +311,7 @@ class DatabaseConnector(HasTraits):
             wellid = self.get_wellid(pointid, cursor)
 
             cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure
-                     (PointID, DateMeasured, TemperatureWater, CONDDL, WaterHead, 
+                     (PointID, DateMeasured, TemperatureWater, [CONDDL (mS/cm)], WaterHead, 
                        WaterHeadAdjusted, DepthToWaterBGS, Notes, WellID)
                      VALUES (%s, %s, %d, %d, %d, %d, %d, %s, %s)'''
 

@@ -71,9 +71,12 @@ class DataTool(BaseTool):
                     xi = 'NaN'
             else:
                 xi = self.x_format.format(x)
-
-            d['xy'] = (xi, '{:0.3f}'.format(y))
-
+            try:
+                y = '{:0.3f}'.format(y)
+            except ValueError:
+                pass
+                
+            d['xy'] = (xi, y)
             self.new_value = d
             self.last_mouse_position = (event.x, event.y)
 

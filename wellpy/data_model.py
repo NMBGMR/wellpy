@@ -149,6 +149,9 @@ class DataModel:
                 oline = line
                 line = line.strip()
                 line = line.split(delimiter)
+                
+                print 'line i={}, len={}, {}'.format(i, len(line), line)
+                
                 if not self.serial_number:
                     if line[0].startswith('Serial number'):
                         self.serial_number = line[0].split('=')[1].strip()
@@ -159,7 +162,8 @@ class DataModel:
 
                 if i < 53:
                     continue
-
+                
+                cond = 0
                 if len(line) == 3:
                     date, water_head, temp = line
                 elif len(line) == 4:
