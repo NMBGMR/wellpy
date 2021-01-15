@@ -14,13 +14,15 @@
 # limitations under the License.
 # ===============================================================================
 from envisage.plugin import Plugin
+from envisage.ui.tasks.action.preferences_action import PreferencesAction
 from envisage.ui.tasks.task_extension import TaskExtension
 from envisage.ui.tasks.task_factory import TaskFactory
-from pyface.tasks.action.schema import SMenu, SMenuBar
+from pyface.tasks.action.schema import SMenu, SMenuBar, SGroup
 from pyface.tasks.action.schema_addition import SchemaAddition
 from traits.api import List
 from traitsui.menu import Action
 
+from wellpy.tasks.actions import ResetLayoutAction
 from wellpy.tasks.task import WellpyTask
 
 
@@ -31,8 +33,21 @@ class WellpyPlugin(Plugin):
 
     # service_offers = List(contributes_to='envisage.service_offers')
     # available_task_extensions = List(contributes_to='pychron.available_task_extensions')
-    # task_extensions = List(contributes_to='envisage.ui.tasks.task_extensions')
-    # my_task_extensions = List(contributes_to='envisage.ui.tasks.task_extensions')
+    task_extensions = List(contributes_to='envisage.ui.tasks.task_extensions')
+
+    def _tasks_default(self):
+        return [TaskFactory(id='wellpy.task',
+                            factory=self._wellpy_factory), ]
+
+    def _wellpy_factory(self):
+        wt = WellpyTask()
+        db = self.application.get_service('wellpy.database_connector.DatabaseConnector')
+        wt.model.db = db
+
+        return wt
+
+# ============= EOF =============================================
+# my_task_extensions = List(contributes_to='envisage.ui.tasks.task_extensions')
 
     # def _task_extensions_default(self):
     #     ext=[]
@@ -50,16 +65,25 @@ class WellpyPlugin(Plugin):
     #         #                factory=OpenWellAction,
     #         #                path='MenuBar/file.menu/Open')]))
     #     return ext
-
-    def _tasks_default(self):
-        return [TaskFactory(id='wellpy.task',
-                            factory=self._wellpy_factory), ]
-
-    def _wellpy_factory(self):
-        wt = WellpyTask()
-        db = self.application.get_service('wellpy.database_connector.DatabaseConnector')
-        wt.model.db = db
-
-        return wt
-
-# ============= EOF =============================================
+    # def _task_extensions_default(self):
+    #     def file_menu():
+    #         return SMenu(
+    #             SGroup(id='Open'),
+    #             # SGroup(id='New'),
+    #             # SGroup(
+    #             #     GenericSaveAsAction(),
+    #             #     GenericSaveAction(),
+    #             #     id='Save'),
+    #             # SGroup(),
+    #             PreferencesAction(),
+    #             id='file.menu', name='File')
+    #
+    #     def window_menu():
+    #         return SMenu(ResetLayoutAction(),
+    #                      id='window.menu', name='Window')
+    #
+    #     actions = [SchemaAddition(factory=file_menu,
+    #                               path='MenuBar'),
+    #                SchemaAddition(factory=window_menu,
+    #                               path='MenuBar')]
+    #     return [TaskExtension(actions=actions)]

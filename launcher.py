@@ -14,6 +14,9 @@
 # limitations under the License.
 # ===============================================================================
 from traits.etsconfig.api import ETSConfig
+
+from wellpy.tasks.wellntel.plugin import WellntelPlugin
+
 ETSConfig.toolkit = "qt4"
 
 import logging
@@ -34,13 +37,16 @@ def launch():
     root.addHandler(shandler)
 
     plugins = [CorePlugin(),
+               TasksPlugin(),
                DatabasePlugin(),
                WellpyPlugin(),
-               TasksPlugin()]
+               WellntelPlugin(),
+               ]
 
     app = WellpyApplication(plugins=plugins)
 
     app.run()
+
 
 if __name__ == '__main__':
     launch()

@@ -22,7 +22,7 @@ from datetime import datetime
 from lxml import etree
 
 from apptools.preferences.preference_binding import bind_preference
-from pyface.progress_dialog import ProgressDialog
+# from pyface.progress_dialog import ProgressDialog
 from traits.api import HasTraits, Str, UUID, Float
 
 from wellpy.config import config
@@ -201,6 +201,82 @@ class DatabaseConnector(HasTraits):
             args = (int(state), mi, ma, pointid)
             cursor.execute(cmd, args)
 
+    def get_wellid(self, pointid, cursor=None):
+        if cursor is None:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+        # retrieve wellid
+        cmd = '''Select WellID from dbo.WellData where PointID=%s'''
+        print(pointid)
+        cursor.execute(cmd, pointid)
+        try:
+            return cursor.fetchone()[0]
+        except TypeError:
+            # this "pointid" not in database
+            print('PointID={} not in WellData. cannot get WellID')
+
+    def get_last_acoustic_record(self):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+
+        # retrieve wellid
+        sql = '''select DateMeasured from WaterLevelsContinuous_Acoustic
+        where DataSource='S'
+        order by DateMeasured desc 
+        '''
+        cursor.execute(sql)
+        return cursor.fetchone()[0]
+
+    def insert_chunk(self, conn, cursor, rows, cmd, chunker):
+        n = len(rows)
+        chunk_len = 300
+        ntries = 2
+        cn = n / chunk_len + 1
+        for i in xrange(0, n, chunk_len):
+            print 'Insert chunk:  {}/{}'.format(i, n)
+            # pd.change_message('Insert chunk:  {}/{}'.format(i, cn))
+            # pd.update(i)
+            chunk = rows[i:i + chunk_len]
+
+            for j in xrange(ntries):
+                try:
+                    print('mock execute chunk')
+                    # cursor.executemany(cmd, chunker(chunk))
+                except:
+                    print 'need to retry', j + 1
+                    time.sleep(2)
+                    continue
+
+                break
+            conn.commit()
+        conn.close()
+
+    def insert_wellntel_water_levels(self, pointid, rows):
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        wellid = self.get_wellid(pointid, cursor)
+        if wellid:
+            cmd = '''INSERT into dbo.WaterLevelsContinuous_Acoustic
+                                 (WellID, PointID, 
+                                 DateMeasured, 
+                                 TemperatureAir,
+                                 DepthToWaterBGS,
+                                 MeasurementMethod
+                                 DataSource,
+                                 MeasuringAgency,
+                                 )
+                                 VALUES (%d, %d, %d, %d, %d, %d, %d, %d)'''
+
+            def chunker(chunk):
+                return [(wellid, pointid,
+                         row['timestamp'].strftime('%m/%d/%Y %I:%M:%S %p'),
+                         float(row['temperature']),
+                         float(row['depth']),
+                         'K', 'S', 'NMBGMR'
+                         ) for row in chunk]
+
+            self.insert_chunk(conn, cursor, rows, cmd, chunker)
+
     def insert_continuous_water_levels(self, pointid, rows, with_update=False):
         """
         InsertWLCPressurePython
@@ -232,39 +308,41 @@ class DatabaseConnector(HasTraits):
         else:
             conn = self._get_connection()
             cursor = conn.cursor()
-
-            # retrieve wellid
-            cmd = '''Select WellID from dbo.WellData where PointID=%s'''
-            cursor.execute(cmd, pointid)
-            wellid = cursor.fetchone()[0]
+            wellid = self.get_wellid(pointid, cursor)
 
             cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure
                      (PointID, DateMeasured, TemperatureWater, CONDDL, WaterHead, 
                        WaterHeadAdjusted, DepthToWaterBGS, Notes, WellID)
                      VALUES (%s, %s, %d, %d, %d, %d, %d, %s, %s)'''
 
-            chunk_len = 300
-            ntries = 2
-            cn = n / chunk_len + 1
-            for i in xrange(0, n, chunk_len):
-                print 'Insert chunk:  {}/{}'.format(i, cn)
-                # pd.change_message('Insert chunk:  {}/{}'.format(i, cn))
-                # pd.update(i)
-                chunk = rows[i:i + chunk_len]
-                values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
-                           temp, cond, a, ah, bgs, note, wellid)
-                          for x, a, ah, bgs, temp, cond in chunk]
-                for j in xrange(ntries):
-                    try:
-                        cursor.executemany(cmd, values)
-                    except:
-                        print 'need to retry', j + 1
-                        time.sleep(2)
-                        continue
+            def chunker(chunk):
+                return [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
+                         temp, cond, a, ah, bgs, note, wellid)
+                        for x, a, ah, bgs, temp, cond in chunk]
 
-                    break
-                conn.commit()
-            conn.close()
+            self.insert_chunk(conn, cursor, rows, cmd, chunker)
+            # chunk_len = 300
+            # ntries = 2
+            # cn = n / chunk_len + 1
+            # for i in xrange(0, n, chunk_len):
+            #     print 'Insert chunk:  {}/{}'.format(i, cn)
+            #     # pd.change_message('Insert chunk:  {}/{}'.format(i, cn))
+            #     # pd.update(i)
+            #     chunk = rows[i:i + chunk_len]
+            #     values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
+            #                temp, cond, a, ah, bgs, note, wellid)
+            #               for x, a, ah, bgs, temp, cond in chunk]
+            #     for j in xrange(ntries):
+            #         try:
+            #             cursor.executemany(cmd, values)
+            #         except:
+            #             print 'need to retry', j + 1
+            #             time.sleep(2)
+            #             continue
+            #
+            #         break
+            #     conn.commit()
+            # conn.close()
 
         inserted_nresults = len(self.get_continuous_water_levels(pointid))
         return existing_nresults, inserted_nresults
