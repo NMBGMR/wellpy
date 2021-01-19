@@ -128,8 +128,43 @@ class DataModel:
         pp = p.lower()
         if pp.endswith('.csv'):
             self._load_csv(p)
+        elif pp.endswith('.wcsv'):
+            self._load_wcsv(p)
         else:
             self._load_xls(p)
+
+    def _load_wcsv(self, p):
+        delimiter = ','
+        # 2020-09-29 13:13:00
+        fmt = ''
+        x, y = [], []
+        with open(p, 'r') as rfile:
+            for i, line in enumerate(rfile):
+                oline = line
+                line = line.strip()
+                line = line.split(delimiter)
+                if len(line) == 4:
+                    date, tempC, tempR, depth = line
+                    try:
+                        depth = float(depth)
+                    except (ValueError, TypeError):
+                        continue
+
+                    try:
+                        temp = float(tempC)
+                    except (ValueError, TypeError):
+                        continue
+
+                    date = datetime.strptime(date, fmt)
+
+                    x.append(time.mktime(date.timetuple()))
+                    y.append(depth)
+                    # ws.append(water_head)
+                    # ts.append(temp)
+                    # cs.append(cond)
+
+        self.depth_to_water_x = x
+        self.depth_to_water_y = y
 
     def _load_csv(self, p):
         delimiter = ','
@@ -149,9 +184,9 @@ class DataModel:
                 oline = line
                 line = line.strip()
                 line = line.split(delimiter)
-                
+
                 print 'line i={}, len={}, {}'.format(i, len(line), line)
-                
+
                 if not self.serial_number:
                     if line[0].startswith('Serial number'):
                         self.serial_number = line[0].split('=')[1].strip()
@@ -162,7 +197,7 @@ class DataModel:
 
                 if i < 53:
                     continue
-                
+
                 cond = 0
                 if len(line) == 3:
                     date, water_head, temp = line

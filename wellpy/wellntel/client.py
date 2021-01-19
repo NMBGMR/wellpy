@@ -78,7 +78,7 @@ class WellntelClient(HasTraits):
             return [factory(line) for line in rfile]
 
     def _make_output(self, pid, records):
-        with open(os.path.join(self.output_root, '{}.csv'.format(pid)), 'w') as wfile:
+        with open(os.path.join(self.output_root, '{}.wcsv'.format(pid)), 'w') as wfile:
             wfile.write('timestamp,temperature_C,temperature_raw,depth\n')
             for r in records:
                 keys = ('timestamp_raw', 'temperature_C', 'temperature_raw', 'depth')
