@@ -240,8 +240,7 @@ class DatabaseConnector(HasTraits):
 
             for j in xrange(ntries):
                 try:
-                    print('mock execute chunk')
-                    # cursor.executemany(cmd, chunker(chunk))
+                    cursor.executemany(cmd, chunker(chunk))
                 except:
                     print 'need to retry', j + 1
                     time.sleep(2)
