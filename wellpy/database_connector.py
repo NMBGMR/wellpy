@@ -154,7 +154,7 @@ class DatabaseConnector(HasTraits):
         with self._get_cursor() as cursor:
             cmd = '''SELECT DISTINCT PointID FROM dbo.Equipment
             WHERE PointID IS NOT NULL
-            AND(EquipmentType LIKE 'pressure%') 
+            AND (EquipmentType = 'Pressure transducer' or EquipmentType='Acoustic sounder')  
             ORDER BY[PointID]'''
 
             cursor.execute(cmd)
@@ -257,14 +257,11 @@ class DatabaseConnector(HasTraits):
         if wellid:
             cmd = '''INSERT into dbo.WaterLevelsContinuous_Acoustic
                                  (WellID, PointID, 
-                                 DateMeasured, 
-                                 TemperatureAir,
-                                 DepthToWaterBGS,
-                                 MeasurementMethod
-                                 DataSource,
-                                 MeasuringAgency,
-                                 )
-                                 VALUES (%d, %d, %d, %d, %d, %d, %d, %d)'''
+                                 DateMeasured,TemperatureAir,DepthToWaterBGS,
+                                 MeasurementMethod,DataSource,MeasuringAgency)
+                                 VALUES (%s, %s,
+                                  %s, %s, %s, 
+                                  %s, %s, %s)'''
 
             def chunker(chunk):
                 return [(wellid, pointid,
@@ -276,7 +273,7 @@ class DatabaseConnector(HasTraits):
 
             self.insert_chunk(conn, cursor, rows, cmd, chunker)
 
-    def insert_continuous_water_levels(self, pointid, rows, with_update=False):
+    def insert_continuous_water_levels(self, pointid, rows, with_update=False, is_acoustic=False):
         """
         InsertWLCPressurePython
         @PointID nvarchar(50),
@@ -291,123 +288,50 @@ class DatabaseConnector(HasTraits):
         :param rows:
         :return:
         """
-        existing_nresults = len(self.get_continuous_water_levels(pointid))
-
         user = config.user
 
         n = len(rows)
         note = 'testnote'
-        if with_update:
-            with self._get_cursor() as cursor:
-                cmd = 'InsertWLCPressurePython_NEW_wUpdate %s, %s, %d, %d, %d, %d, %s'
-                for i, (x, a, ah, bgs, temp) in enumerate(rows):
-                    datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
-                    args = (pointid, datemeasured, temp, a, ah, bgs, note)
-                    cursor.execute(cmd, args)
+
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        wellid = self.get_wellid(pointid, cursor)
+
+        if is_acoustic:
+            existing_nresults = len(self.get_acoustic_water_levels(pointid))
+            rows = [{'timestamp': r[0], 'temperature': r[1], 'depth': r[2]} for r in rows]
+            self.insert_wellntel_water_levels(pointid, rows)
+            inserted_nresults = len(self.get_acoustic_water_levels(pointid))
         else:
-            conn = self._get_connection()
-            cursor = conn.cursor()
-            wellid = self.get_wellid(pointid, cursor)
+            existing_nresults = len(self.get_continuous_water_levels(pointid))
+            if with_update:
+                with self._get_cursor() as cursor:
+                    cmd = 'InsertWLCPressurePython_NEW_wUpdate %s, %s, %d, %d, %d, %d, %s'
+                    for i, (x, a, ah, bgs, temp) in enumerate(rows):
+                        datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
+                        args = (pointid, datemeasured, temp, a, ah, bgs, note)
+                        cursor.execute(cmd, args)
+            else:
+                cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure
+                         (PointID, DateMeasured, TemperatureWater, [CONDDL (mS/cm)], WaterHead, 
+                           WaterHeadAdjusted, DepthToWaterBGS, Notes, WellID)
+                         VALUES (%s, %s, %d, %d, %d, %d, %d, %s, %s)'''
 
-            cmd = '''INSERT into dbo.WaterLevelsContinuous_Pressure
-                     (PointID, DateMeasured, TemperatureWater, [CONDDL (mS/cm)], WaterHead, 
-                       WaterHeadAdjusted, DepthToWaterBGS, Notes, WellID)
-                     VALUES (%s, %s, %d, %d, %d, %d, %d, %s, %s)'''
+                def chunker(chunk):
+                    return [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
+                             temp, cond, a, ah, bgs, note, wellid)
+                            for x, a, ah, bgs, temp, cond in chunk]
 
-            def chunker(chunk):
-                return [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
-                         temp, cond, a, ah, bgs, note, wellid)
-                        for x, a, ah, bgs, temp, cond in chunk]
+                self.insert_chunk(conn, cursor, rows, cmd, chunker)
+            inserted_nresults = len(self.get_continuous_water_levels(pointid))
 
-            self.insert_chunk(conn, cursor, rows, cmd, chunker)
-            # chunk_len = 300
-            # ntries = 2
-            # cn = n / chunk_len + 1
-            # for i in xrange(0, n, chunk_len):
-            #     print 'Insert chunk:  {}/{}'.format(i, cn)
-            #     # pd.change_message('Insert chunk:  {}/{}'.format(i, cn))
-            #     # pd.update(i)
-            #     chunk = rows[i:i + chunk_len]
-            #     values = [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
-            #                temp, cond, a, ah, bgs, note, wellid)
-            #               for x, a, ah, bgs, temp, cond in chunk]
-            #     for j in xrange(ntries):
-            #         try:
-            #             cursor.executemany(cmd, values)
-            #         except:
-            #             print 'need to retry', j + 1
-            #             time.sleep(2)
-            #             continue
-            #
-            #         break
-            #     conn.commit()
-            # conn.close()
-
-        inserted_nresults = len(self.get_continuous_water_levels(pointid))
         return existing_nresults, inserted_nresults
 
-    def insert_continuous_water_levels_xml(self, pointid, rows):
-
-        schema = self.get_schema()
-
-        container = etree.Element('WaterLevelsContinuous_Pressure_Test')
-        TAGS = 'TemperatureWater', 'WaterHead', 'WaterHeadAdjusted', 'DepthToWaterBGS',
-        for x, a, ah, bgs, temp in rows[:5]:
-            elem = etree.Element('row')
-
-            pid = etree.Element('PointID')
-            pid.text = pointid
-            elem.append(pid)
-
-            pid = etree.Element('DateMeasured')
-            # pid.text = datetime.fromtimestamp(x).strftime('%m/%d/%Y%I:%M:%S %p')
-            pid.text = datetime.fromtimestamp(x).isoformat()
-            elem.append(pid)
-
-            for tag, v in zip(TAGS, (temp, a, ah, bgs)):
-                item = etree.Element(tag)
-                item.text = unicode(v)
-                elem.append(item)
-
-            # print etree.tostring(elem, pretty_print=True)
-            # schema.assertValid(elem)
-            # print 'ada',x, schema.validate(elem)
-            note = etree.Element('Notes')
-            note.text = 'testnote'
-            elem.append(note)
-            container.append(elem)
-
-        # container = etree.XML(testtxt)
-
-        # xmldata.append(container)
-        #
-        # print(etree.tostring(cont, pretty_print=True, xml_declaration=True, standalone='yes'))
-        # print(etree.tostring(container, pretty_print=True, xml_declaration=True, standalone='yes'))
-        # schema.assertValid(cont)
-        schema.assertValid(container)
-        # if schema.validate(container):
-
+    def get_acoustic_water_levels(self, point_id):
         with self._get_cursor() as cursor:
-
-            txt = etree.tostring(container,
-                                 encoding='UTF-8',
-                                 xml_declaration=True,
-                                 standalone='yes',
-                                 pretty_print=True
-                                 )
-            print txt
-
-            # cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
-            # print testtxt
-            # cmd, args = 'InsertWLCPressurePython %s', (testtxt,)
-            cmd, args = 'InsertWLCPressureXMLPython_NEW_wUpdate %s', (txt,)
-            cursor.execute(cmd, args)
-            print cursor.fetchall()
-
-        results = self.get_continuous_water_levels(pointid)
-        print 'asdfasdfasdf', len(results)
-        # else:
-        #     print 'failed to valid'
+            cmd = '''Select * from dbo.WaterLevelsContinuous_Acoustic where PointID=%s'''
+            cursor.execute(cmd, point_id)
+            return cursor.fetchall()
 
     def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
         with self._get_cursor() as cursor:
@@ -463,3 +387,65 @@ if __name__ == '__main__':
     #                                        qced=1)
     # print len(r)
 # ============= EOF =============================================
+# def insert_continuous_water_levels_xml(self, pointid, rows):
+    #
+    #     schema = self.get_schema()
+    #
+    #     container = etree.Element('WaterLevelsContinuous_Pressure_Test')
+    #     TAGS = 'TemperatureWater', 'WaterHead', 'WaterHeadAdjusted', 'DepthToWaterBGS',
+    #     for x, a, ah, bgs, temp in rows[:5]:
+    #         elem = etree.Element('row')
+    #
+    #         pid = etree.Element('PointID')
+    #         pid.text = pointid
+    #         elem.append(pid)
+    #
+    #         pid = etree.Element('DateMeasured')
+    #         # pid.text = datetime.fromtimestamp(x).strftime('%m/%d/%Y%I:%M:%S %p')
+    #         pid.text = datetime.fromtimestamp(x).isoformat()
+    #         elem.append(pid)
+    #
+    #         for tag, v in zip(TAGS, (temp, a, ah, bgs)):
+    #             item = etree.Element(tag)
+    #             item.text = unicode(v)
+    #             elem.append(item)
+    #
+    #         # print etree.tostring(elem, pretty_print=True)
+    #         # schema.assertValid(elem)
+    #         # print 'ada',x, schema.validate(elem)
+    #         note = etree.Element('Notes')
+    #         note.text = 'testnote'
+    #         elem.append(note)
+    #         container.append(elem)
+    #
+    #     # container = etree.XML(testtxt)
+    #
+    #     # xmldata.append(container)
+    #     #
+    #     # print(etree.tostring(cont, pretty_print=True, xml_declaration=True, standalone='yes'))
+    #     # print(etree.tostring(container, pretty_print=True, xml_declaration=True, standalone='yes'))
+    #     # schema.assertValid(cont)
+    #     schema.assertValid(container)
+    #     # if schema.validate(container):
+    #
+    #     with self._get_cursor() as cursor:
+    #
+    #         txt = etree.tostring(container,
+    #                              encoding='UTF-8',
+    #                              xml_declaration=True,
+    #                              standalone='yes',
+    #                              pretty_print=True
+    #                              )
+    #         print txt
+    #
+    #         # cmd, args = 'InsertWLCPressureXMLPython %s', (txt,)
+    #         # print testtxt
+    #         # cmd, args = 'InsertWLCPressurePython %s', (testtxt,)
+    #         cmd, args = 'InsertWLCPressureXMLPython_NEW_wUpdate %s', (txt,)
+    #         cursor.execute(cmd, args)
+    #         print cursor.fetchall()
+    #
+    #     results = self.get_continuous_water_levels(pointid)
+    #     print 'asdfasdfasdf', len(results)
+    #     # else:
+    #     #     print 'failed to valid'

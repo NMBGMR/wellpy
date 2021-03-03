@@ -429,7 +429,7 @@ class WellpyModel(HasTraits):
 
     def save_csv(self, p, delimiter=','):
         if self.selected_point_id:
-            header, data = self._gather_data(use_excel_format=True)
+            header, data, _ = self._gather_data(use_excel_format=True)
             if not p.endswith('.csv'):
                 p = '{}.csv'.format(p)
 
@@ -784,14 +784,14 @@ class WellpyModel(HasTraits):
             information(None, 'QC status for {} saved to database'.format(pid))
 
     def _save_db(self, with_qc=False):
-        _, data = self._gather_data(with_qc=with_qc)
+        _, data, is_acoustic = self._gather_data(with_qc=with_qc)
         if YES == confirm(None, 'Are you sure you want to save to the database?'):
             pid = self.selected_point_id.name
             with_update = True
             if confirm(None, 'Is this new data or an update? Yes=New, No=Update') == YES:
                 with_update = False
 
-            e, i = self.db.insert_continuous_water_levels(pid, data, with_update=with_update)
+            e, i = self.db.insert_continuous_water_levels(pid, data, with_update=with_update, is_acoustic=is_acoustic)
             information(None, 'There were {} existing records for {}. {} records inserted'.format(e, pid, i - e))
 
     def _save_path(self, ext):
@@ -840,19 +840,23 @@ class WellpyModel(HasTraits):
         model = self.data_model
         x = model.x
         depth_to_water = model.depth_to_water_y
-        ah = model.adjusted_water_head
-        h = model.water_head
-        water_temp = model.water_temp
-        cond = model.cond
+        if model.is_acoustic:
+            args = (x, model.temp_air, depth_to_water)
+            keys = ('timestamp', 'temp_air', 'depth_to_water')
+        else:
+            ah = model.adjusted_water_head
+            h = model.water_head
+            water_temp = model.water_temp
+            cond = model.cond
 
-        if use_isoformat:
-            x = [datetime.fromtimestamp(xi).isoformat() for xi in x]
-        elif use_excel_format:
-            x = [datetime.fromtimestamp(xi).strftime('%m/%d/%Y %H:%M') for xi in x]
+            if use_isoformat:
+                x = [datetime.fromtimestamp(xi).isoformat() for xi in x]
+            elif use_excel_format:
+                x = [datetime.fromtimestamp(xi).strftime('%m/%d/%Y %H:%M') for xi in x]
 
-        args = (x, h, ah, depth_to_water, water_temp, cond)
-        keys = ('date/time', 'head (ft)', 'adjusted head (ft)', 'Depth to water (ft bgs)', 'water_temp (C)',
-                'cond (mS/cm)')
+            args = (x, h, ah, depth_to_water, water_temp, cond)
+            keys = ('date/time', 'head (ft)', 'adjusted head (ft)', 'Depth to water (ft bgs)', 'water_temp (C)',
+                    'cond (mS/cm)')
         if with_qc:
             args = args + (ones_like(x),)
             keys = keys + ('qc',)
@@ -860,7 +864,7 @@ class WellpyModel(HasTraits):
         header = ','.join(keys)
 
         data = array(args).T
-        return header, data
+        return header, data, model.is_acoustic
 
     def _add_depth_to_water(self, padding, *args, **kw):
         pd = self._plot_data((DEPTH_X, []),

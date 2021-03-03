@@ -43,6 +43,8 @@ class DataModel:
     water_temp = None
     cond = None
 
+    is_acoustic = False
+
     def __init__(self, path):
         self._path = path
         if os.path.isfile(path):
@@ -130,6 +132,7 @@ class DataModel:
             self._load_csv(p)
         elif pp.endswith('.wcsv'):
             self._load_wcsv(p)
+            self.is_acoustic = True
         else:
             self._load_xls(p)
 
@@ -137,7 +140,7 @@ class DataModel:
         delimiter = ','
         # 2020-09-29 13:13:00
         fmt = ''
-        x, y = [], []
+        x, y, ts = [], [], []
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
                 oline = line
@@ -160,11 +163,12 @@ class DataModel:
                     x.append(time.mktime(date.timetuple()))
                     y.append(depth)
                     # ws.append(water_head)
-                    # ts.append(temp)
+                    ts.append(temp)
                     # cs.append(cond)
 
         self.depth_to_water_x = x
         self.depth_to_water_y = y
+        self.temp_air = ts
 
     def _load_csv(self, p):
         delimiter = ','
