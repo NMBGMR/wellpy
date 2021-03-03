@@ -23,6 +23,26 @@ from openpyxl import load_workbook
 
 from wellpy.sigproc import smooth
 
+fmts = ('%Y/%m/%d %H:%M:%S',
+        '%Y/%m/%d %H:%M',
+        '%m/%d/%Y %H:%M:%S',
+        '%m/%d/%Y %H:%M',
+        '%m/%d/%y %H:%M:%S',
+        '%m/%d/%y %H:%M')
+
+
+def extract_timestamp(date):
+
+    for fmt in fmts:
+        try:
+            return datetime.strptime(date, fmt)
+        except ValueError, e:
+            continue
+
+    else:
+        raise ValueError('Invalid date format "{}"'
+                         'Did not match any of the following\n{}'.format(date, '\n'.join(fmts)))
+
 
 class Channel:
     identification = None
@@ -139,7 +159,7 @@ class DataModel:
     def _load_wcsv(self, p):
         delimiter = ','
         # 2020-09-29 13:13:00
-        fmt = ''
+        fmt = '%'
         x, y, ts = [], [], []
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
@@ -158,7 +178,7 @@ class DataModel:
                     except (ValueError, TypeError):
                         continue
 
-                    date = datetime.strptime(date, fmt)
+                    date = extract_timestamp(date)
 
                     x.append(time.mktime(date.timetuple()))
                     y.append(depth)
@@ -176,12 +196,7 @@ class DataModel:
         ws = []
         ts = []
         cs = []
-        fmts = ('%Y/%m/%d %H:%M:%S',
-                '%Y/%m/%d %H:%M',
-                '%m/%d/%Y %H:%M:%S',
-                '%m/%d/%Y %H:%M',
-                '%m/%d/%y %H:%M:%S',
-                '%m/%d/%y %H:%M')
+
         cfmt = None
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
@@ -225,17 +240,7 @@ class DataModel:
                     continue
 
                 if not cfmt:
-                    for fmt in fmts:
-                        try:
-                            date = datetime.strptime(date, fmt)
-                            cfmt = fmt
-                            break
-                        except ValueError, e:
-                            continue
-
-                    else:
-                        raise ValueError('Invalid date format "{}"'
-                                         'Did not match any of the following\n{}'.format(date, '\n'.join(fmts)))
+                   date = extract_timestamp(date)
                 else:
                     date = datetime.strptime(date, cfmt)
 
