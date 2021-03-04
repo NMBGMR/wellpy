@@ -716,10 +716,15 @@ class WellpyModel(HasTraits):
             # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
             # (WATER_HEAD, self._add_water_head))
         else:
-            funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
-                     # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
-                     (ADJ_WATER_HEAD, self._add_adjusted_water_head),
-                     (MANUAL_WATER_LEVEL, self._add_manual_water_depth),)
+            if self.data_model.is_acoustic:
+                funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
+                         (MANUAL_WATER_LEVEL, self._add_manual_water_depth)
+                         )
+            else:
+                funcs = ((DEPTH_TO_WATER, self._add_depth_to_water),
+                         # (DEPTH_TO_SENSOR, self._add_depth_to_sensor),
+                         (ADJ_WATER_HEAD, self._add_adjusted_water_head),
+                         (MANUAL_WATER_LEVEL, self._add_manual_water_depth),)
 
         index_range = None
         n = len(funcs)

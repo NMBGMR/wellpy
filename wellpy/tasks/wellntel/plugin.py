@@ -37,7 +37,7 @@ class WellntelPlugin(Plugin):
     def _task_extensions_default(self):
         def wellntel_menu():
             return SMenu(WellntelGetDataAction(),
-                         WellntelLoadFromFileAction(),
+                         # WellntelLoadFromFileAction(),
                          id='wellntel.menu', name='Wellntel')
 
         actions = [SchemaAddition(factory=wellntel_menu,

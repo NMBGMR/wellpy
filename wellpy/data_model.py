@@ -28,7 +28,9 @@ fmts = ('%Y/%m/%d %H:%M:%S',
         '%m/%d/%Y %H:%M:%S',
         '%m/%d/%Y %H:%M',
         '%m/%d/%y %H:%M:%S',
-        '%m/%d/%y %H:%M')
+        '%m/%d/%y %H:%M',
+        '%Y-%m-%d %H:%M:%S',
+        )
 
 
 def extract_timestamp(date):
@@ -159,7 +161,6 @@ class DataModel:
     def _load_wcsv(self, p):
         delimiter = ','
         # 2020-09-29 13:13:00
-        fmt = '%'
         x, y, ts = [], [], []
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
