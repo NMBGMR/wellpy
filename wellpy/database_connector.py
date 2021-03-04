@@ -336,12 +336,9 @@ class DatabaseConnector(HasTraits):
     def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
         with self._get_cursor() as cursor:
             cmd, args = 'GetWLCPressurePython %s', (point_id.upper(),)
-            # cmd, args = 'GetWaterLevelsContinuousAcousticPython %s', (point_id,)
-
             if low or high or qced is not None:
                 args = (point_id, low, high, qced)
                 cmd = '{}, %s, %s, %d'.format(cmd)
-            # print '-------------', cmd, args
             cursor.execute(cmd, args)
             return cursor.fetchall()
 

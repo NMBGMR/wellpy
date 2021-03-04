@@ -162,6 +162,8 @@ class DataModel:
         delimiter = ','
         # 2020-09-29 13:13:00
         x, y, ts = [], [], []
+        self.pointid = os.path.splitext(os.path.basename(p))[0]
+
         with open(p, 'r') as rfile:
             for i, line in enumerate(rfile):
                 oline = line

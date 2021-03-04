@@ -200,7 +200,11 @@ class WellpyModel(HasTraits):
         self._apply_qc()
 
     def get_continuous(self, name, qced=0):
-        records = self.db.get_continuous_water_levels(name, qced=qced)
+        if self.data_model.is_acoustic:
+            records = self.db.get_acoustic_water_levels(name)
+        else:
+            records = self.db.get_continuous_water_levels(name, qced=qced)
+
         if records:
             # records = sorted(records, key=lambda x: x[1])
             records = sorted(records, key=itemgetter(1))
@@ -453,6 +457,7 @@ class WellpyModel(HasTraits):
 
         pid = self.selected_point_id
         if pid is not None:
+            # pid.name same as pointid
             self.plot_manual_measurements(pid.name)
             self.plot_existing_continuous(pid.name)
 
@@ -694,7 +699,8 @@ class WellpyModel(HasTraits):
                 else:
                     self.selected_point_id = point_ids[-1]
         else:
-            self.selected_point_id = next((p for p in self.point_ids if p.name == pointid), None)
+            pointid = pointid.lower()
+            self.selected_point_id = next((p for p in self.point_ids if p.name.lower() == pointid), None)
 
         if self.selected_point_id:
             self.scroll_to_row = self.point_ids.index(self.selected_point_id)
