@@ -155,11 +155,11 @@ class DatabaseConnector(HasTraits):
             cmd = '''SELECT DISTINCT PointID FROM dbo.Equipment
             WHERE PointID IS NOT NULL
             AND (EquipmentType = 'Pressure transducer' or EquipmentType='Acoustic sounder')  
-            ORDER BY[PointID]'''
+            ORDER BY PointID '''
 
             cursor.execute(cmd)
 
-            return [PointIDRecord(*r) for r in cursor.fetchall()]
+            return sorted([PointIDRecord(*r) for r in cursor.fetchall()], key=lambda x: x.name)
 
     def get_qc_point_ids(self, qced=False):
         with self._get_cursor() as cursor:
@@ -327,9 +327,14 @@ class DatabaseConnector(HasTraits):
 
         return existing_nresults, inserted_nresults
 
-    def get_acoustic_water_levels(self, point_id):
+    def get_acoustic_water_levels(self, point_id, qced=None):
         with self._get_cursor() as cursor:
             cmd = '''Select * from dbo.WaterLevelsContinuous_Acoustic where PointID=%s'''
+            args = (point_id,)
+            if qced is not None:
+                cmd = '{} and PublicRelease=%s'.format(cmd)
+                args = (point_id, qced)
+                
             cursor.execute(cmd, point_id)
             return cursor.fetchall()
 

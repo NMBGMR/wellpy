@@ -188,9 +188,10 @@ class DataModel:
                     # ws.append(water_head)
                     ts.append(temp)
                     # cs.append(cond)
-
+        self.x = array(x)
         self.depth_to_water_x = x
-        self.depth_to_water_y = y
+        self.raw_depth_to_water_y = array(y)
+        print('dsfa', self.raw_depth_to_water_y)
         self.temp_air = ts
 
     def _load_csv(self, p):

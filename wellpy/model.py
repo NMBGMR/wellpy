@@ -140,7 +140,7 @@ class WellpyModel(HasTraits):
     point_id_entry = Str
     point_ids = List
     selected_point_id = Instance(PointIDRecord)
-    filtered_point_ids = Property(depends_on='point_id_entry')
+    filtered_point_ids = Property(depends_on='point_id_entry, viewer_point_ids')
 
     qc_point_ids = List
     selected_qc_point_id = Instance(PointIDRecord)
@@ -171,18 +171,17 @@ class WellpyModel(HasTraits):
     viewer_use_daily_mins = Bool(False)
 
     def activated(self):
-        if DATABSE_DEBUG:
-            pids = ['A', 'B', 'C']
-            self.point_ids = [PointIDRecord(p, '', '') for p in pids]
-        else:
-            try:
-                pids = self.db.get_point_ids()
-                self.point_ids = pids
-            except BaseException:
-                pass
-
-        if self.point_ids:
-            self.selected_point_id = self.point_ids[0]
+        #if DATABSE_DEBUG:
+        #    pids = ['A', 'B', 'C']
+        #    self.point_ids = [PointIDRecord(p, '', '') for p in pids]
+        #else:
+        #    try:
+        #    pids = self.db.get_point_ids()
+        #    self.point_ids = pids
+         #   except BaseException:
+          #      pass
+        #if self.point_ids:
+        #    self.selected_point_id = self.point_ids[0]
 
         if DEBUG:
             if FILE_DEBUG:
@@ -208,46 +207,54 @@ class WellpyModel(HasTraits):
         if records:
             # records = sorted(records, key=lambda x: x[1])
             records = sorted(records, key=itemgetter(1))
-
-            if self.viewer_use_daily_mins:
-                xs, wts, hs, ahs, ds = [], [], [], [], []
-                # for day, records in groupby(records, key=itemgetter(1)):
-                for day, records in groupby(records, key=lambda x: x[1].date()):
-                    records = list(records)
-                    ri = records[0]
-                    x = time.mktime(ri[1].timetuple())
-                    xs.append(x)
-
-                    wtss = [r[2] for r in records]
-                    hss = [r[3] for r in records]
-                    ahss = [r[4] for r in records]
-                    dss = [r[5] for r in records]
-
-                    ah = min(ahss)
-                    idx = ahss.index(ah)
-
-                    hs.append(hss[idx])
-                    wts.append(wtss[idx])
-                    ahs.append(ah)
-                    ds.append(dss[idx])
-            else:
-                n = len(records)
-
-                xs = zeros(n)
-                hs = zeros(n)
-                ahs = zeros(n)
-                ds = zeros(n)
-                wts = zeros(n)
-
+            n = len(records)
+            xs = zeros(n)
+            
+            if self.data_model.is_acoustic:
+                ys = zeros(n)
                 for i, ri in enumerate(records):
-                    x = time.mktime(ri[1].timetuple())
-                    xs[i] = x
-                    wts[i] = float(ri[2])
-                    hs[i] = float(ri[3])
-                    ahs[i] = float(ri[4])
-                    ds[i] = float(ri[5])
+                    print(i, ri)
+                    #xs[i]=ri[0]
+                    #ys[i]=ri[1]
+                return xs, ys
+            else:
+                if self.viewer_use_daily_mins:
+                    xs, wts, hs, ahs, ds = [], [], [], [], []
+                    # for day, records in groupby(records, key=itemgetter(1)):
+                    for day, records in groupby(records, key=lambda x: x[1].date()):
+                        records = list(records)
+                        ri = records[0]
+                        x = time.mktime(ri[1].timetuple())
+                        xs.append(x)
 
-            return xs, wts, hs, ahs, ds
+                        wtss = [r[2] for r in records]
+                        hss = [r[3] for r in records]
+                        ahss = [r[4] for r in records]
+                        dss = [r[5] for r in records]
+
+                        ah = min(ahss)
+                        idx = ahss.index(ah)
+
+                        hs.append(hss[idx])
+                        wts.append(wtss[idx])
+                        ahs.append(ah)
+                        ds.append(dss[idx])
+                else:
+                    
+                    hs = zeros(n)
+                    ahs = zeros(n)
+                    ds = zeros(n)
+                    wts = zeros(n)
+
+                    for i, ri in enumerate(records):
+                        x = time.mktime(ri[1].timetuple())
+                        xs[i] = x
+                        wts[i] = float(ri[2])
+                        hs[i] = float(ri[3])
+                        ahs[i] = float(ri[4])
+                        ds[i] = float(ri[5])
+
+                return xs, wts, hs, ahs, ds
 
     def _viewer_use_daily_mins_changed(self, new):
         self.load_viewer_data()
@@ -268,16 +275,28 @@ class WellpyModel(HasTraits):
             ocxs = []
             ohs = []
             if args:
-                cxs, wts, hs, ahs, ds = args
-                plot.data.set_data(QC_DEPTH_X, cxs)
-                plot.data.set_data(QC_DEPTH_Y, ds)
+                if is_acoustic:
+                    xs, ys = args
+                    plot.data.set_data(QC_DEPTH_X, xs)
+                    plot.data.set_data(QC_DEPTH_Y, ys)
+             
+                else:
+                    cxs, wts, hs, ahs, ds = args
+                    plot.data.set_data(QC_DEPTH_X, cxs)
+                    plot.data.set_data(QC_DEPTH_Y, ds)
+                
                 ocxs.extend(cxs)
                 ohs.extend(hs)
 
             if nqc_args:
-                cxs, wts, hs, ahs, ds = nqc_args
-                plot.data.set_data(DEPTH_X, cxs)
-                plot.data.set_data(DEPTH_Y, ds)
+                if is_acoustic:
+                    xs, ys = nqc_args
+                    plot.data.set_data(DEPTH_X, cxs)
+                    plot.data.set_data(DEPTH_Y, ys)
+                else:
+                    cxs, wts, hs, ahs, ds = nqc_args
+                    plot.data.set_data(DEPTH_X, cxs)
+                    plot.data.set_data(DEPTH_Y, ds)
                 ocxs.extend(cxs)
                 ohs.extend(hs)
 
@@ -288,8 +307,11 @@ class WellpyModel(HasTraits):
             plot.plot((QC_MANUAL_X, QC_MANUAL_Y),
                       marker='circle', marker_size=2.5,
                       type='scatter', color='yellow')
-
-            self._add_head(plot, ocxs, ohs)
+            
+            if is_acoustic:
+                pass
+            else:
+                self._add_head(plot, ocxs, ohs)
 
             self._calculate_deviations(xs, ys, cxs, ds)
             self.refresh_plot()
@@ -380,7 +402,7 @@ class WellpyModel(HasTraits):
 
     def load_viewer(self):
         self.viewer_point_ids = self.db.get_point_ids_simple()
-
+        
     def load_qc(self):
         self.qc_point_ids = self.db.get_qc_point_ids()
 
@@ -550,48 +572,48 @@ class WellpyModel(HasTraits):
 
         :return:
         """
-
-        def calculated_dtw_bin(d1, d0, x, h):
-            l1 = d1 + h[-1]
-            l0 = d0 + h[0]
-
-            l = l1 * ones(h.shape[0])
-            if correct_drift:
-                m = (l1 - l0) / (x[-1] - x[0])
-                # l = [l1 - m * (t - x[0]) for t in x]
-                l = l0 + m * (x - x[0])
-
-            dtw = l - h
-            return dtw
-
-        ah = self.data_model.adjusted_water_head
-        xs = self.data_model.x
-
+        
         mxs = self.data_model.manual_water_depth_x
         mys = self.data_model.manual_water_depth_y
-
-        mss = self.data_model.omissions
-
-        ds = column_stack((delete(mxs, mss), delete(mys, mss)))
-
-        if value is not None:
-            dtw = value
+        if self.data_model.is_acoustic:
+            xs = self.data_model.x
+            dtw = self.data_model.raw_depth_to_water_y
         else:
-            dtw = zeros_like(ah)
-            for i in xrange(len(ds) - 1):
-                m0, m1 = ds[i], ds[i + 1]
-                mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
-                if mask.any():
-                    v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
-                    dtw[mask] = v
+            def calculated_dtw_bin(d1, d0, x, h):
+                l1 = d1 + h[-1]
+                l0 = d0 + h[0]
+
+                l = l1 * ones(h.shape[0])
+                if correct_drift:
+                    m = (l1 - l0) / (x[-1] - x[0])
+                    # l = [l1 - m * (t - x[0]) for t in x]
+                    l = l0 + m * (x - x[0])
+
+                dtw = l - h
+                return dtw
+
+            ah = self.data_model.adjusted_water_head
+            xs = self.data_model.x
+
+            mss = self.data_model.omissions
+
+            ds = column_stack((delete(mxs, mss), delete(mys, mss)))
+
+            if value is not None:
+                dtw = value
+            else:
+                dtw = zeros_like(ah)
+                for i in xrange(len(ds) - 1):
+                    m0, m1 = ds[i], ds[i + 1]
+                    mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
+                    if mask.any():
+                        v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
+                        dtw[mask] = v
 
         plot = self._plots[DEPTH_TO_WATER]
-
         plot.data.set_data(DEPTH_X, xs)
         plot.data.set_data(DEPTH_Y, dtw)
 
-        plot.data.set_data(MANUAL_WATER_DEPTH_X, mxs)
-        plot.data.set_data(MANUAL_WATER_DEPTH_Y, mys)
         # plot.default_index.metadata['selection'] = mss
 
         self.data_model.depth_to_water_x = xs
@@ -693,19 +715,21 @@ class WellpyModel(HasTraits):
             if not serial_num:
                 warning(None, 'Could not extract Serial number from file')
             else:
-                point_ids = [p for p in self.point_ids if p.serial_num == serial_num]
+                point_ids = [p for p in self.viewer_point_ids if p.serial_num == serial_num]
                 if not point_ids:
                     information(None, 'Serial number="{}"  not in database'.format(serial_num))
                 else:
                     self.selected_point_id = point_ids[-1]
         else:
             pointid = pointid.lower()
-            self.selected_point_id = next((p for p in self.point_ids if p.name.lower() == pointid), None)
+            self.selected_point_id = next((p for p in self.viewer_point_ids if p.name.lower() == pointid), None)
 
         if self.selected_point_id:
-            self.scroll_to_row = self.point_ids.index(self.selected_point_id)
+            self.scroll_to_row = self.viewer_point_ids.index(self.selected_point_id)
 
         self.retrieve_depth_to_water()
+        if data.is_acoustic:
+            self.calculate_depth_to_water()
         return True
         # else:
         #     warning(None, 'Could not automatically retrieve depth water. Please manually select a Point ID from the '
@@ -1046,7 +1070,7 @@ class WellpyModel(HasTraits):
 
     # property get/set
     def _get_filtered_point_ids(self):
-        return fuzzyfinder(self.point_id_entry, self.point_ids, ('name', 'serial_num'))
+        return fuzzyfinder(self.point_id_entry, self.viewer_point_ids, ('name', 'serial_num'))
 
     def _get_filename(self):
         return os.path.basename(self.path)
