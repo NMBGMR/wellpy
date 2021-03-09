@@ -533,13 +533,15 @@ class WellpyModel(HasTraits):
         self.data_model.manual_water_depth_y = ys
         self.data_model.water_depth_status = ss
 
-        plot.data.set_data(MANUAL_WATER_DEPTH_X, xs)
-        plot.data.set_data(MANUAL_WATER_DEPTH_Y, ys)
+        for p in (plot, self._plots[DEPTH_TO_WATER]):
+            p.data.set_data(MANUAL_WATER_DEPTH_X, xs)
+            p.data.set_data(MANUAL_WATER_DEPTH_Y, ys)
 
         ss = where(asarray(ss, dtype=bool))[0]
         plot.default_index.metadata['selection'] = ss
 
         plot.title = self.selected_point_id.name
+
         self.refresh_plot()
 
     def snap(self):
