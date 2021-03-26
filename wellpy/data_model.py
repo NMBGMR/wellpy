@@ -14,11 +14,11 @@
 # limitations under the License.
 # ===============================================================================
 import os
-
+import csv
 import time
 
 from datetime import datetime
-from numpy import empty, polyfit, polyval, array, where, diff, logical_and, hstack
+from numpy import empty, polyfit, polyval, array, where, diff, logical_and, hstack, delete
 from openpyxl import load_workbook
 
 from wellpy.sigproc import smooth
@@ -91,12 +91,80 @@ class DataModel:
     def get_depth_to_water(self):
         return array(self.depth_to_water_y)
 
-    def smooth(self, ys, window, method):
+    def smooth(self, ys, window, method, selection=None):
+        
+        if selection:
+            rys = ys[:]
+            x = self.x
+            idx = where(logical_and(selection[0]<=x, x<=selection[1]))[0]
+            
+            pys = smooth(ys, window, method)
+     
+            rys[idx] = pys[idx]
+        else:
+            rys = smooth(ys, window, method)
+            
+        return rys
+        
+    def remove_up_spikes(self, ys, threshold, selection, normal_mode=True):
+        x = self.x
+        ys = array(ys[:])
+        if selection:
 
-        pys = smooth(ys, window, method)
+            if normal_mode:
+                m=None
+                for i, xi in enumerate(x):
+                    if selection[0]<=xi<=selection[1]:
+                        if m is None:
+                            m = ys[i]
+                            continue
+                        
+                        if (m-ys[i])>threshold:
+                            ys[i] = m
+                        else:
+                            m = ys[i]
+            else:
+                fidx = where(logical_and(selection[0]<=x, x<=selection[1]))[0]
+                sidx = fidx[0]
+                fys = ys[fidx]
+                sys = smooth(fys, 11, 'hanning')    
+                idx = sys - fys  >= threshold      
+                #print('fidx', fidx)
+                #print('sidx', sidx)
+                #print('fys', fys)
+                #print('max', max(fys))
+                #print('idx', idx) 
+                
+                nidx = fidx[idx]
+                ys[nidx] = sys[idx]
+                
+                #ys = max(fys)
+            
+                    
+                    
+            #fidx = where(logical_and(selection[0]<=x, x<=selection[1]))[0]
+            #fys = ys[fidx]
+            #idxs = where(diff(ys)>=threshold)[0]
+            #print(idxs)
+            #m = fys.max()
+            #idxs = where(m-ys>threshold)[0]
+            #for i in idxs:
+            #    if selection[0] <= x[i] <= selection[1]:
+            #        ys[i] = m
+            
+            #if idxs.any():
+            #    if idxs.shape[0] == 1:
+            #        idxs = array([idxs[0], ys.shape[0] - 1])
 
-        return pys
-
+                
+            #    for sidx in idxs:
+            #        sx= x[sidx]
+                    # print 'sxex', sx, ex
+             #       if selection[0] <= sx <= selection[1]:
+             #           ys
+                #        ys[sidx] = ys[sidx-1]
+        return ys
+        
     def fix_data(self, ys, threshold, selection):
         x = self.x
         ys = array(ys[:])
@@ -159,16 +227,20 @@ class DataModel:
             self._load_xls(p)
 
     def _load_wcsv(self, p):
-        delimiter = ','
+        #delimiter = ','
         # 2020-09-29 13:13:00
         x, y, ts = [], [], []
         self.pointid = os.path.splitext(os.path.basename(p))[0]
-
+        
         with open(p, 'r') as rfile:
-            for i, line in enumerate(rfile):
+            dialect = csv.Sniffer().sniff(rfile.read(1024))
+            rfile.seek(0)
+            reader = csv.reader(rfile, dialect)
+            for i, line in enumerate(reader):
+            #for i, line in enumerate(rfile):
                 oline = line
-                line = line.strip()
-                line = line.split(delimiter)
+                #line = line.strip()
+                #line = line.split(delimiter)
                 if len(line) == 4:
                     date, tempC, tempR, depth = line
                     try:
@@ -191,7 +263,6 @@ class DataModel:
         self.x = array(x)
         self.depth_to_water_x = x
         self.raw_depth_to_water_y = array(y)
-        print('dsfa', self.raw_depth_to_water_y)
         self.temp_air = ts
 
     def _load_csv(self, p):

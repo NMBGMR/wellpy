@@ -170,6 +170,8 @@ class WellpyModel(HasTraits):
     use_daily_mins = Bool(False)
     viewer_use_daily_mins = Bool(False)
 
+    is_pressure = Property
+    
     def activated(self):
         #if DATABSE_DEBUG:
         #    pids = ['A', 'B', 'C']
@@ -195,12 +197,23 @@ class WellpyModel(HasTraits):
         self.load_qc()
         self.load_viewer()
 
+    def undo(self):
+        if self.data_model.is_acoustic:
+            ys = self.data_model.raw_depth_to_water_y
+            plot = self._plots[DEPTH_TO_WATER]
+            plot.data.set_data('depth_y2', ys)
+            self.data_model.depth_to_water_y = ys
+            
+            self.calculate_depth_to_water()
+        else:
+            self.unfix_adj_head_data()
+
     def apply_qc(self):
         self._apply_qc()
 
     def get_continuous(self, name, qced=0):
         if self.data_model.is_acoustic:
-            records = self.db.get_acoustic_water_levels(name)
+            records = self.db.get_acoustic_water_levels(name, qced=qced)
         else:
             records = self.db.get_continuous_water_levels(name, qced=qced)
 
@@ -213,9 +226,8 @@ class WellpyModel(HasTraits):
             if self.data_model.is_acoustic:
                 ys = zeros(n)
                 for i, ri in enumerate(records):
-                    print(i, ri)
-                    #xs[i]=ri[0]
-                    #ys[i]=ri[1]
+                    xs[i]=ri[0]
+                    ys[i]=ri[1]
                 return xs, ys
             else:
                 if self.viewer_use_daily_mins:
@@ -498,7 +510,10 @@ class WellpyModel(HasTraits):
     def plot_existing_continuous(self, name):
         args = self.get_continuous(name, qced=1)
         if args:
-            xs, wts, hs, ahs, ds = args
+            if self.data_model.is_acoustic:
+                xs, ds = args
+            else:
+                xs, wts, hs, ahs, ds = args
 
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(QC_DEPTH_X, xs)
@@ -543,16 +558,19 @@ class WellpyModel(HasTraits):
         plot.title = self.selected_point_id.name
 
         self.refresh_plot()
-
+    
     def snap(self):
 
         sel = self.get_selection()
-        if sel:
+        if sel is not None and len(sel):
             idx = sel[0]
 
             mxs = self.data_model.manual_water_depth_x
             mys = self.data_model.manual_water_depth_y
-            ah = self.data_model.adjusted_water_head
+            if self.data_model.is_acoustic:
+                ah = self.data_model.raw_depth_to_water_y
+            else:
+                ah = self.data_model.adjusted_water_head
 
             xs = self.data_model.x
             v = mys[idx]
@@ -566,10 +584,11 @@ class WellpyModel(HasTraits):
                 m = ah[mask].mean()
 
             dev = m - ah
-
+            if self.data_model.is_acoustic:
+                dev = -dev
             self.calculate_depth_to_water(value=v + dev)
-
-    def calculate_depth_to_water(self, value=None, correct_drift=False):
+  
+    def calculate_depth_to_water(self, value=None, correct_drift=False, offset=None):
         """
 
         :return:
@@ -579,7 +598,11 @@ class WellpyModel(HasTraits):
         mys = self.data_model.manual_water_depth_y
         if self.data_model.is_acoustic:
             xs = self.data_model.x
-            dtw = self.data_model.raw_depth_to_water_y
+            if value is not None:
+                dtw = value
+            else:
+                dtw = self.data_model.raw_depth_to_water_y
+                
         else:
             def calculated_dtw_bin(d1, d0, x, h):
                 l1 = d1 + h[-1]
@@ -612,6 +635,9 @@ class WellpyModel(HasTraits):
                         v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
                         dtw[mask] = v
 
+        if offset:
+            dtw += offset
+            
         plot = self._plots[DEPTH_TO_WATER]
         plot.data.set_data(DEPTH_X, xs)
         plot.data.set_data(DEPTH_Y, dtw)
@@ -661,19 +687,21 @@ class WellpyModel(HasTraits):
 
         plot = self._plots[ADJ_WATER_HEAD]
         plot.data.set_data('adjusted_water_head_y', ys)
+        plot.data.set_data('adjusted_water_head_y', ys)
         self.refresh_plot()
 
     def fix_depth_to_water_data(self, threshold):
         ys = self.data_model.depth_to_water_y
         if ys.any():
-            ys, zs, fs = self.data_model.fix_data(ys, threshold)
+            ys = self.data_model.remove_up_spikes(ys, threshold, self._depth_to_water_range_tool.selection)
+            #ys = self.data_model.smooth(ys, window, 'hanning', self._depth_to_water_range_tool.selection)
             plot = self._plots[DEPTH_TO_WATER]
-            plot_needed = 'sy' not in plot.data.arrays
+            plot_needed = 'depth_y2' not in plot.data.arrays
             plot.data.set_data('depth_y2', ys)
-            # plot.data.set_data(DEPTH_Y, ys)
+             #plot.data.set_data(DEPTH_Y, ys)
             if plot_needed:
-                plot.plot((DEPTH_X, 'depth_y2'), color='green')
-
+                plot.plot((DEPTH_X, 'depth_y2'), color='purple')
+            self.data_model.depth_to_water_y = ys
         self.refresh_plot()
 
     def refresh_plot(self):
@@ -936,6 +964,10 @@ class WellpyModel(HasTraits):
 
         line.overlays.append(z)
 
+        line.active_tool = tool = RangeSelection(line, left_button_selects=True)
+        line.overlays.append(RangeSelectionOverlay(component=line))
+
+        self._depth_to_water_range_tool = tool
         # plot manual measurements
         plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y),
                   marker='circle', marker_size=MARKER_SIZE,
@@ -1071,6 +1103,9 @@ class WellpyModel(HasTraits):
         return pc
 
     # property get/set
+    def _get_is_pressure(self):
+        return not self.data_model.is_acoustic
+        
     def _get_filtered_point_ids(self):
         return fuzzyfinder(self.point_id_entry, self.viewer_point_ids, ('name', 'serial_num'))
 

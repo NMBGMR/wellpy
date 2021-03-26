@@ -61,7 +61,9 @@ class ToolboxPane(TraitsDockPane):
     omit_selection_button = Button('Omit Selected')
     snap_to_selected_button = Button('Snap To Selected')
     remove_selection_button = Button('Remove Selected')
-
+    offset_button = Button('Apply Offset')
+    offset = Float
+    
     calculate_button = Button('Calculate')
     correct_drift = Bool
     drift_correction_direction = Enum('Forward', 'Reverse')
@@ -70,9 +72,11 @@ class ToolboxPane(TraitsDockPane):
     save_png_button = Button('Save PNG')
     save_pdf_button = Button('Save PDF')
     match_timeseries_button = Button('Match Timeseries')
-
+    
     undo_button = Button('Undo')
-
+    def _offset_button_fired(self):
+        self.model.calculate_depth_to_water(offset=self.offset)
+        
     def _remove_selection_button_fired(self):
         self.model.remove_selection()
 
@@ -110,7 +114,7 @@ class ToolboxPane(TraitsDockPane):
         self.model.match_timeseries()
 
     def _undo_button_fired(self):
-        self.model.unfix_adj_head_data()
+        self.model.undo()
 
     def _calculate_button_fired(self):
         self.model.calculate_depth_to_water(self.correct_drift)
@@ -124,6 +128,7 @@ class ToolboxPane(TraitsDockPane):
                                                                           'displayed in the Depth To Water graph'),
                             UItem('pane.snap_to_selected_button', tooltip='Offset the Adjusted Head to the selected '
                                                                           'Manual WL measurement'),
+                            UItem('pane.offset_button'), UItem('pane.offset'),                                 
                             # Item('pane.constant_offset', label='Constant Offset'),
                             show_border=True, label='Manual')
 
@@ -132,11 +137,18 @@ class ToolboxPane(TraitsDockPane):
                                                                                 'than "Threshold"'),
                                  UItem('pane.undo_button')),
                           Item('use_daily_mins'),
+                          visible_when='is_pressure',
                           show_border=True, label='Adjusted Head')
 
         calculate_grp = VGroup(HGroup(Item('pane.correct_drift'),
                                       Item('pane.drift_correction_direction'),
-                                      UItem('pane.calculate_button')),
+                                      UItem('pane.calculate_button'),
+                                      UItem('pane.undo_button')),
+                                      
+                               HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
+                                 UItem('pane.fix_depth_to_water_data_button', tooltip='Automatically remove offsets greater '
+                                                                                'than "Threshold"')),
+                                                                                
                                HGroup(
                                    # Item('pane.match_timeseries_threshold', label='Threshold'),
                                    UItem('pane.match_timeseries_button',

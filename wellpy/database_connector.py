@@ -241,8 +241,8 @@ class DatabaseConnector(HasTraits):
             for j in xrange(ntries):
                 try:
                     cursor.executemany(cmd, chunker(chunk))
-                except:
-                    print 'need to retry', j + 1
+                except BaseException, e:
+                    print 'need to retry', e, j + 1
                     time.sleep(2)
                     continue
 
@@ -258,17 +258,19 @@ class DatabaseConnector(HasTraits):
             cmd = '''INSERT into dbo.WaterLevelsContinuous_Acoustic
                                  (WellID, PointID, 
                                  DateMeasured,TemperatureAir,DepthToWaterBGS,
-                                 MeasurementMethod,DataSource,MeasuringAgency)
+                                 PreProcessDataField,
+                                 MeasurementMethod,DataSource,MeasuringAgency, PublicRelease)
                                  VALUES (%s, %s,
                                   %s, %s, %s, 
-                                  %s, %s, %s)'''
+                                  %s, %s, %s, %s)'''
 
             def chunker(chunk):
                 return [(wellid, pointid,
-                         row['timestamp'].strftime('%m/%d/%Y %I:%M:%S %p'),
+                         row['timestamp'],
                          float(row['temperature']),
                          float(row['depth']),
-                         'K', 'S', 'NMBGMR'
+                         float(row['raw_depth'])
+                         'K', 'W', 'NMBGMR', False
                          ) for row in chunk]
 
             self.insert_chunk(conn, cursor, rows, cmd, chunker)
@@ -296,10 +298,12 @@ class DatabaseConnector(HasTraits):
         conn = self._get_connection()
         cursor = conn.cursor()
         wellid = self.get_wellid(pointid, cursor)
-
+        fmt = '%m/%d/%Y %I:%M:%S %p'
         if is_acoustic:
             existing_nresults = len(self.get_acoustic_water_levels(pointid))
-            rows = [{'timestamp': r[0], 'temperature': r[1], 'depth': r[2]} for r in rows]
+            rows = [{'timestamp': datetime.fromtimestamp(r[0]).strftime(fmt), 
+                    'temperature': r[1], 'depth': r[2],
+                    'raw_depth': r[3]} for r in rows]
             self.insert_wellntel_water_levels(pointid, rows)
             inserted_nresults = len(self.get_acoustic_water_levels(pointid))
         else:
@@ -308,7 +312,7 @@ class DatabaseConnector(HasTraits):
                 with self._get_cursor() as cursor:
                     cmd = 'InsertWLCPressurePython_NEW_wUpdate %s, %s, %d, %d, %d, %d, %s'
                     for i, (x, a, ah, bgs, temp) in enumerate(rows):
-                        datemeasured = datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p')
+                        datemeasured = datetime.fromtimestamp(x).strftime(fmt)
                         args = (pointid, datemeasured, temp, a, ah, bgs, note)
                         cursor.execute(cmd, args)
             else:
@@ -318,7 +322,7 @@ class DatabaseConnector(HasTraits):
                          VALUES (%s, %s, %d, %d, %d, %d, %d, %s, %s)'''
 
                 def chunker(chunk):
-                    return [(pointid, datetime.fromtimestamp(x).strftime('%m/%d/%Y %I:%M:%S %p'),
+                    return [(pointid, datetime.fromtimestamp(x).strftime(fmt),
                              temp, cond, a, ah, bgs, note, wellid)
                             for x, a, ah, bgs, temp, cond in chunk]
 
@@ -329,13 +333,13 @@ class DatabaseConnector(HasTraits):
 
     def get_acoustic_water_levels(self, point_id, qced=None):
         with self._get_cursor() as cursor:
-            cmd = '''Select * from dbo.WaterLevelsContinuous_Acoustic where PointID=%s'''
+            cmd = '''Select DateMeasured,DepthToWaterBGS from dbo.WaterLevelsContinuous_Acoustic where PointID=%s'''
             args = (point_id,)
             if qced is not None:
                 cmd = '{} and PublicRelease=%s'.format(cmd)
                 args = (point_id, qced)
                 
-            cursor.execute(cmd, point_id)
+            cursor.execute(cmd, args)
             return cursor.fetchall()
 
     def get_continuous_water_levels(self, point_id, low=None, high=None, qced=None):
