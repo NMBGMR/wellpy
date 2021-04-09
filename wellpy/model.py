@@ -593,47 +593,40 @@ class WellpyModel(HasTraits):
 
         :return:
         """
-        
+
+        def calculated_dtw_bin(d1, d0, x, h):
+            l1 = d1 + h[-1]
+            l0 = d0 + h[0]
+
+            l = l1 * ones(h.shape[0])
+            if correct_drift:
+                m = (l1 - l0) / (x[-1] - x[0])
+                # l = [l1 - m * (t - x[0]) for t in x]
+                l = l0 + m * (x - x[0])
+
+            return l - h
+
         mxs = self.data_model.manual_water_depth_x
         mys = self.data_model.manual_water_depth_y
-        if self.data_model.is_acoustic:
-            xs = self.data_model.x
-            if value is not None:
-                dtw = value
-            else:
-                dtw = self.data_model.raw_depth_to_water_y
-                
+        mss = self.data_model.omissions
+        ds = column_stack((delete(mxs, mss), delete(mys, mss)))
+
+        if value is not None:
+            dtw = value
         else:
-            def calculated_dtw_bin(d1, d0, x, h):
-                l1 = d1 + h[-1]
-                l0 = d0 + h[0]
-
-                l = l1 * ones(h.shape[0])
-                if correct_drift:
-                    m = (l1 - l0) / (x[-1] - x[0])
-                    # l = [l1 - m * (t - x[0]) for t in x]
-                    l = l0 + m * (x - x[0])
-
-                dtw = l - h
-                return dtw
-
-            ah = self.data_model.adjusted_water_head
             xs = self.data_model.x
-
-            mss = self.data_model.omissions
-
-            ds = column_stack((delete(mxs, mss), delete(mys, mss)))
-
-            if value is not None:
-                dtw = value
+            if self.data_model.is_acoustic:
+                ah = self.data_model.raw_depth_to_water_y
             else:
-                dtw = zeros_like(ah)
-                for i in xrange(len(ds) - 1):
-                    m0, m1 = ds[i], ds[i + 1]
-                    mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
-                    if mask.any():
-                        v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
-                        dtw[mask] = v
+                ah = self.data_model.adjusted_water_head
+
+            dtw = zeros_like(ah)
+            for i in xrange(len(ds) - 1):
+                m0, m1 = ds[i], ds[i + 1]
+                mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
+                if mask.any():
+                    v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
+                    dtw[mask] = v
 
         if offset:
             dtw += offset
