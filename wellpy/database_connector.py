@@ -262,6 +262,7 @@ class DatabaseConnector(HasTraits):
                                  MeasurementMethod,DataSource,MeasuringAgency, PublicRelease)
                                  VALUES (%s, %s,
                                   %s, %s, %s, 
+                                  %s,
                                   %s, %s, %s, %s)'''
 
             def chunker(chunk):
