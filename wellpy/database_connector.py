@@ -269,7 +269,7 @@ class DatabaseConnector(HasTraits):
                          row['timestamp'],
                          float(row['temperature']),
                          float(row['depth']),
-                         float(row['raw_depth'])
+                         float(row['raw_depth']),
                          'K', 'W', 'NMBGMR', False
                          ) for row in chunk]
 
@@ -301,7 +301,7 @@ class DatabaseConnector(HasTraits):
         fmt = '%m/%d/%Y %I:%M:%S %p'
         if is_acoustic:
             existing_nresults = len(self.get_acoustic_water_levels(pointid))
-            rows = [{'timestamp': datetime.fromtimestamp(r[0]).strftime(fmt), 
+            rows = [{'timestamp': datetime.fromtimestamp(r[0]).strftime(fmt),
                     'temperature': r[1], 'depth': r[2],
                     'raw_depth': r[3]} for r in rows]
             self.insert_wellntel_water_levels(pointid, rows)

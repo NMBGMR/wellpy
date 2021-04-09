@@ -906,8 +906,8 @@ class WellpyModel(HasTraits):
         x = model.x
         depth_to_water = model.depth_to_water_y
         if model.is_acoustic:
-            args = (x, model.temp_air, depth_to_water)
-            keys = ('timestamp', 'temp_air', 'depth_to_water')
+            args = (x, model.temp_air, depth_to_water, model.raw_depth_to_water_y)
+            keys = ('timestamp', 'temp_air', 'depth_to_water', 'raw_depth_to_water')
         else:
             ah = model.adjusted_water_head
             h = model.water_head
