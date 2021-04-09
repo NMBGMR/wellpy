@@ -49,6 +49,8 @@ class ToolboxPane(TraitsDockPane):
     name = 'Toolbox'
     fix_adj_head_data_button = Button('Remove Offsets/Zeros')
     fix_depth_to_water_data_button = Button('Remove Offsets/Zeros')
+    fix_acoustic_upspike_button = Button('Remove Upspikes')
+    upspike_threshold = Float(0.25)
 
     constant_offset = Float
     adj_head_threshold = Float(0.25)
@@ -110,6 +112,9 @@ class ToolboxPane(TraitsDockPane):
     def _fix_depth_to_water_data_button_fired(self):
         self.model.fix_depth_to_water_data(self.depth_to_water_threshold)
 
+    def _fix_acoustic_upsike_button_fired(self):
+        self.model.fix_upspikes(self.upspike_threshold)
+
     def _match_timeseries_button_fired(self):
         self.model.match_timeseries()
 
@@ -146,8 +151,11 @@ class ToolboxPane(TraitsDockPane):
                                       UItem('pane.undo_button')),
                                       
                                HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
-                                 UItem('pane.fix_depth_to_water_data_button', tooltip='Automatically remove offsets greater '
+                                      UItem('pane.fix_depth_to_water_data_button', tooltip='Automatically remove '
+                                                                                          'offsets greater '
                                                                                 'than "Threshold"')),
+                               HGroup(Item('pane.upspike_threshold', label='Threshold'),
+                                      UItem('pane.fix_acoustic_upspike_button')),
                                                                                 
                                HGroup(
                                    # Item('pane.match_timeseries_threshold', label='Threshold'),

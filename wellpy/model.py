@@ -657,6 +657,11 @@ class WellpyModel(HasTraits):
         self.auto_results = [AutoResult(*fi) for fi in fs]
         self._plot_adj_head(ys)
 
+    def fix_depth_to_water_data(self, threshold):
+        ys = self.data_model.depth_to_water_y
+        ys, _, _ = self.data_model.fix_data(ys, threshold, self._depth_to_water_range_tool.selection)
+        self._set_dtw(ys)
+
     def match_timeseries(self):
         # ys = self.data_model.get_depth_to_water()
         plot = self._plots[DEPTH_TO_WATER]
@@ -683,19 +688,22 @@ class WellpyModel(HasTraits):
         plot.data.set_data('adjusted_water_head_y', ys)
         self.refresh_plot()
 
-    def fix_depth_to_water_data(self, threshold):
+    def fix_upspikes(self, threshold):
         ys = self.data_model.depth_to_water_y
         if ys.any():
             ys = self.data_model.remove_up_spikes(ys, threshold, self._depth_to_water_range_tool.selection)
             #ys = self.data_model.smooth(ys, window, 'hanning', self._depth_to_water_range_tool.selection)
-            plot = self._plots[DEPTH_TO_WATER]
-            plot_needed = 'depth_y2' not in plot.data.arrays
-            plot.data.set_data('depth_y2', ys)
-             #plot.data.set_data(DEPTH_Y, ys)
-            if plot_needed:
-                plot.plot((DEPTH_X, 'depth_y2'), color='purple')
-            self.data_model.depth_to_water_y = ys
+            self._set_dtw(ys)
         self.refresh_plot()
+
+    def _set_dtw(self, ys):
+        plot = self._plots[DEPTH_TO_WATER]
+        plot_needed = 'depth_y2' not in plot.data.arrays
+        plot.data.set_data('depth_y2', ys)
+        # plot.data.set_data(DEPTH_Y, ys)
+        if plot_needed:
+            plot.plot((DEPTH_X, 'depth_y2'), color='purple')
+        self.data_model.depth_to_water_y = ys
 
     def refresh_plot(self):
         self.plot_container.invalidate_and_redraw()
