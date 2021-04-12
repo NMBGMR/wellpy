@@ -583,7 +583,9 @@ class WellpyModel(HasTraits):
             else:
                 m = ah[mask].mean()
 
+
             dev = m - ah
+            #print(v, m)
             if self.data_model.is_acoustic:
                 dev = -dev
             self.calculate_depth_to_water(value=v + dev)
@@ -610,23 +612,23 @@ class WellpyModel(HasTraits):
         mys = self.data_model.manual_water_depth_y
         mss = self.data_model.omissions
         ds = column_stack((delete(mxs, mss), delete(mys, mss)))
-
+        xs = self.data_model.x
         if value is not None:
             dtw = value
         else:
-            xs = self.data_model.x
+            
             if self.data_model.is_acoustic:
-                ah = self.data_model.raw_depth_to_water_y
+                dtw = self.data_model.raw_depth_to_water_y
             else:
                 ah = self.data_model.adjusted_water_head
 
-            dtw = zeros_like(ah)
-            for i in xrange(len(ds) - 1):
-                m0, m1 = ds[i], ds[i + 1]
-                mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
-                if mask.any():
-                    v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
-                    dtw[mask] = v
+                dtw = zeros_like(ah)
+                for i in xrange(len(ds) - 1):
+                    m0, m1 = ds[i], ds[i + 1]
+                    mask = where(logical_and(xs >= m0[0], xs < m1[0]))[0]
+                    if mask.any():
+                        v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
+                        dtw[mask] = v
 
         if offset:
             dtw += offset

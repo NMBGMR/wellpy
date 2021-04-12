@@ -263,6 +263,7 @@ class DataModel:
         self.x = array(x)
         self.depth_to_water_x = x
         self.raw_depth_to_water_y = array(y)
+        self.depth_to_water_y = array(y)
         self.temp_air = ts
 
     def _load_csv(self, p):
