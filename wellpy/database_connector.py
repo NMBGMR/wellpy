@@ -163,8 +163,19 @@ class DatabaseConnector(HasTraits):
 
     def get_qc_point_ids(self, qced=False):
         with self._get_cursor() as cursor:
-            cursor.execute('GetPointIDsQCdPython %d', (int(qced),))
-            return sorted([PointIDRecord(*r) for r in cursor.fetchall()], key=lambda x: x.name)
+            sql = '''Select PointID from WaterLevelsContinuous_Acoustic 
+            where PublicRelease=%s 
+            group by PointID
+            order by PointID'''
+            cursor.execute(sql, int(qced))
+            ps = [PointIDRecord(*r) for r in cursor.fetchall()]
+
+            sql = '''Select PointID from WaterLevelsContinuous_Pressure 
+                        where QCed=%s 
+                        group by PointID
+                        order by PointID'''
+            cursor.execute(sql, int(qced))
+            ps.extend([PointIDRecord(*r) for r in cursor.fetchall()])
 
     def get_depth_to_water(self, point_id):
         with self._get_cursor() as cursor:
@@ -189,16 +200,25 @@ class DatabaseConnector(HasTraits):
             schema = etree.XMLSchema(xmlschema_doc)
             return schema
 
-    def apply_qc(self, pointid, limits, state=True):
-        mi, ma = limits
-        mi = datetime.fromtimestamp(mi).strftime('%m/%d/%Y %I:%M:%S %p')
-        ma = datetime.fromtimestamp(ma).strftime('%m/%d/%Y %I:%M:%S %p')
+    def apply_qc(self, pointid, is_acoustic, limits, state=True):
+        if limits:
+            mi, ma = limits
+            mi = datetime.fromtimestamp(mi).strftime('%m/%d/%Y %I:%M:%S %p')
+            ma = datetime.fromtimestamp(ma).strftime('%m/%d/%Y %I:%M:%S %p')
 
         with self._get_cursor() as cursor:
-            cmd = 'Update dbo.WaterLevelsContinuous_Pressure ' \
-                  'Set QCed=%d ' \
-                  'Where DateMeasured>=%s and DateMeasured<=%s and PointID=%s'
-            args = (int(state), mi, ma, pointid)
+            if is_acoustic:
+                cmd = 'Update dbo.WaterLevelsContinuous_Pressure Set PublicRelease=%s'
+            else:
+                cmd = 'Update dbo.WaterLevelsContinuous_Acoustic Set QCed=%s'
+
+            if limits:
+                cmd = '{} Where DateMeasured>=%s and DateMeasured<=%s and PointID=%s'.format(cmd)
+                args = (int(state), mi, ma, pointid)
+            else:
+                cmd = '{} where PointID=%s'
+                args = (int(state), pointid)
+
             cursor.execute(cmd, args)
 
     def get_wellid(self, pointid, cursor=None):

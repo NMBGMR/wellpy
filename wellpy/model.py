@@ -278,6 +278,8 @@ class WellpyModel(HasTraits):
 
         nqc_args = self.get_continuous(pid.name, qced=0)
         args = self.get_continuous(pid.name, qced=1)
+
+        is_acoustic = self.data_model.is_acoustic
         if args or nqc_args:
             self.initialize_plot(qc=True)
             """
@@ -848,7 +850,8 @@ class WellpyModel(HasTraits):
         pid = self.selected_qc_point_id.name
         if YES == confirm(None, 'Are you sure you want to save QC status for {} to the database?'.format(pid)):
             # pid = self.selected_point_id.name
-            self.db.apply_qc(pid, self._qc_limits)
+
+            self.db.apply_qc(pid, self.data_model.is_acoustic, self._qc_limits)
             information(None, 'QC status for {} saved to database'.format(pid))
 
     def _save_db(self, with_qc=False):
