@@ -358,15 +358,18 @@ class WellpyModel(HasTraits):
             else:
                 cxs, wts, hs, ahs, ds = args
                 # plot.plot((DEPTH_X, HEAD_Y), color='blue')
-                self._add_head(plot, cxs, hs)
-                self._calculate_deviations(xs, ys, cxs, ds)
-
+                
             self._qc_limits = min(cxs), max(cxs)
             
             plot = self._plots[DEPTH_TO_WATER]
+
             plot.data.set_data(DEPTH_X, cxs)
             plot.data.set_data(DEPTH_Y, ds)
             xs, ys, ss = self.get_manual_measurements(pid.name)
+
+            if pid.is_acoustic:
+                self._add_head(plot, cxs, hs)
+                self._calculate_deviations(xs, ys, cxs, ds)
 
             plot.data.set_data(QC_MANUAL_X, xs)
             plot.data.set_data(QC_MANUAL_Y, ys)

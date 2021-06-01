@@ -30,10 +30,12 @@ from wellpy.sigproc import SMOOTH_METHODS
 
 class PointIDAdapter(TabularAdapter):
     columns = [('Name', 'name'),
+               ('IsAcoustic', 'is_acoustic'),
                ('DateInstalled', 'install_date'),
                ('Serial', 'serial_num')]
 
     name_width = Int(60)
+    is_acoustic_width=Int(60)
     font = 'arial 10'
 
 
@@ -235,12 +237,13 @@ class QCPane(TraitsDockPane):
 
     def traits_view(self):
         pa = PointIDAdapter()
-        pa.columns = pa.columns[:1]
+        pa.columns = pa.columns[:2]
 
         pg = UItem('qc_point_ids',
                    editor=TabularEditor(selected='selected_qc_point_id',
                                         dclicked='pane.dclicked',
                                         editable=False,
+                                        stretch_last_section=False,
                                         adapter=pa))
         dg = UItem('deviations', editor=TabularEditor(adapter=DeviationAdapter()))
 
