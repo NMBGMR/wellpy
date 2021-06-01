@@ -211,8 +211,11 @@ class WellpyModel(HasTraits):
     def apply_qc(self):
         self._apply_qc()
 
-    def get_continuous(self, name, qced=0):
-        if self.data_model.is_acoustic:
+    def get_continuous(self, name, qced=0, is_acoustic=False):
+        if self.data_model:
+            is_acoustic = self.data_model.is_acoustic
+
+        if is_acoustic:
             records = self.db.get_acoustic_water_levels(name, qced=qced)
         else:
             records = self.db.get_continuous_water_levels(name, qced=qced)
@@ -223,11 +226,19 @@ class WellpyModel(HasTraits):
             n = len(records)
             xs = zeros(n)
             
-            if self.data_model.is_acoustic:
+            if is_acoustic:
                 ys = zeros(n)
                 for i, ri in enumerate(records):
-                    xs[i]=ri[0]
+                    try:
+                        xs[i]=ri[0]
+                    except TypeError:
+                        xs[i] = time.mktime(ri[0].timetuple())
+
                     ys[i]=ri[1]
+                
+                data = zip(xs, ys)
+                data = sorted(data)
+                xs, ys = zip(*data)
                 return xs, ys
             else:
                 if self.viewer_use_daily_mins:
@@ -335,18 +346,23 @@ class WellpyModel(HasTraits):
         if pid is None:
             return
 
-        args = self.get_continuous(pid.name, qced=0)
+        args = self.get_continuous(pid.name, qced=0, is_acoustic=pid.is_acoustic)
         if args:
             self.initialize_plot(qc=True)
 
             """
             PointID, Timestamp, 'temp', 'head', 'adjusted_head', 'depth_to_water'', note
             """
-
-            cxs, wts, hs, ahs, ds = args
+            if pid.is_acoustic:
+                cxs, ds = args
+            else:
+                cxs, wts, hs, ahs, ds = args
+                # plot.plot((DEPTH_X, HEAD_Y), color='blue')
+                self._add_head(plot, cxs, hs)
+                self._calculate_deviations(xs, ys, cxs, ds)
 
             self._qc_limits = min(cxs), max(cxs)
-
+            
             plot = self._plots[DEPTH_TO_WATER]
             plot.data.set_data(DEPTH_X, cxs)
             plot.data.set_data(DEPTH_Y, ds)
@@ -355,12 +371,8 @@ class WellpyModel(HasTraits):
             plot.data.set_data(QC_MANUAL_X, xs)
             plot.data.set_data(QC_MANUAL_Y, ys)
             plot.plot((QC_MANUAL_X, QC_MANUAL_Y),
-                      marker='circle', marker_size=2.5,
-                      type='scatter', color='yellow')
-
-            # plot.plot((DEPTH_X, HEAD_Y), color='blue')
-            self._add_head(plot, cxs, hs)
-            self._calculate_deviations(xs, ys, cxs, ds)
+                    marker='circle', marker_size=2.5,
+                    type='scatter', color='yellow')
             self.refresh_plot()
         else:
             information(None, 'No records required QC for this point id: "{}"'.format(self.selected_qc_point_id.name))
@@ -847,12 +859,12 @@ class WellpyModel(HasTraits):
     def _apply_qc(self):
         # _, data = self._gather_data(with_qc=True)
 
-        pid = self.selected_qc_point_id.name
-        if YES == confirm(None, 'Are you sure you want to save QC status for {} to the database?'.format(pid)):
+        pid = self.selected_qc_point_id
+        if YES == confirm(None, 'Are you sure you want to save QC status for {} to the database?'.format(pid.name)):
             # pid = self.selected_point_id.name
 
-            self.db.apply_qc(pid, self.data_model.is_acoustic, self._qc_limits)
-            information(None, 'QC status for {} saved to database'.format(pid))
+            self.db.apply_qc(pid.name, pid.is_acoustic, self._qc_limits)
+            information(None, 'QC status for {} saved to database'.format(pid.name))
 
     def _save_db(self, with_qc=False):
         _, data, is_acoustic = self._gather_data(with_qc=with_qc)

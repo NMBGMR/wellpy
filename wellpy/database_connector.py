@@ -96,12 +96,15 @@ class PointIDRecord(HasTraits):
     name = Str
     install_date = None
     serial_num = Str
+    is_acoustic = False
 
-    def __init__(self, name, install_date=None, serial_num=None):
+    def __init__(self, name, install_date=None, serial_num=None, is_acoustic=False):
         self.name = name
         self.install_date = install_date
         self.serial_num = serial_num or ''
-
+        self.is_acoustic = is_acoustic
+    def __str__(self):
+        return '{} {}'.format(self.name, self.is_acoustic)
 
 class WaterDepthRecord(HasTraits):
     uuid = Str
@@ -163,19 +166,19 @@ class DatabaseConnector(HasTraits):
 
     def get_qc_point_ids(self, qced=False):
         with self._get_cursor() as cursor:
-            sql = '''Select PointID from WaterLevelsContinuous_Acoustic 
+            sql = '''Select PointID from WaterLevelsContinuous_Acoustic
             where PublicRelease=%s 
             group by PointID
             order by PointID'''
-            cursor.execute(sql, int(qced))
-            ps = [PointIDRecord(*r) for r in cursor.fetchall()]
-
+            cursor.execute(sql, (int(qced),))
+            ps = [PointIDRecord(is_acoustic=True, *r) for r in cursor.fetchall()]
             sql = '''Select PointID from WaterLevelsContinuous_Pressure 
                         where QCed=%s 
                         group by PointID
                         order by PointID'''
-            cursor.execute(sql, int(qced))
-            ps.extend([PointIDRecord(*r) for r in cursor.fetchall()])
+            cursor.execute(sql, (int(qced),))
+            ps.extend([PointIDRecord(is_acoustic=False, *r) for r in cursor.fetchall()])
+        return ps
 
     def get_depth_to_water(self, point_id):
         with self._get_cursor() as cursor:
@@ -208,9 +211,9 @@ class DatabaseConnector(HasTraits):
 
         with self._get_cursor() as cursor:
             if is_acoustic:
-                cmd = 'Update dbo.WaterLevelsContinuous_Pressure Set PublicRelease=%s'
+                cmd = 'Update dbo.WaterLevelsContinuous_Acoustic Set PublicRelease=%s'
             else:
-                cmd = 'Update dbo.WaterLevelsContinuous_Acoustic Set QCed=%s'
+                cmd = 'Update dbo.WaterLevelsContinuous_Pressure Set QCed=%s'
 
             if limits:
                 cmd = '{} Where DateMeasured>=%s and DateMeasured<=%s and PointID=%s'.format(cmd)
@@ -359,8 +362,10 @@ class DatabaseConnector(HasTraits):
             args = (point_id,)
             if qced is not None:
                 cmd = '{} and PublicRelease=%s'.format(cmd)
-                args = (point_id, qced)
-                
+                args = (point_id, int(qced))
+            
+            cmd = '{} order by DateMeasured asc'.format(cmd)
+            print(cmd)
             cursor.execute(cmd, args)
             return cursor.fetchall()
 
