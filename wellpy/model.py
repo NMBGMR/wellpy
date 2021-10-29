@@ -19,8 +19,10 @@ from datetime import datetime
 from itertools import groupby
 from operator import itemgetter
 
+from chaco.lasso_overlay import LassoOverlay
 from chaco.plot_factory import add_default_axes, create_line_plot
 from chaco.tools.broadcaster import BroadcasterTool
+from chaco.tools.lasso_selection import LassoSelection
 from numpy import array, diff, where, ones, logical_and, hstack, zeros_like, vstack, column_stack, asarray, savetxt, \
     ones_like, zeros, delete
 
@@ -600,7 +602,6 @@ class WellpyModel(HasTraits):
             else:
                 m = ah[mask].mean()
 
-
             dev = m - ah
             #print(v, m)
             if self.data_model.is_acoustic:
@@ -613,7 +614,14 @@ class WellpyModel(HasTraits):
             self.calculate_depth_to_water()
 
         dtw = self.data_model.depth_to_water_y
-        self._set_dtw(dtw+offset)
+        plot = self._plots[DEPTH_TO_WATER]
+
+        sel = plot.default_index.metadata['selection']
+        if sel and len(sel):
+            dtw[sel] += offset
+        else:
+            dtw = dtw + offset
+        self._set_dtw(dtw)
         self.refresh_plot()
 
     def calculate_depth_to_water(self, value=None, correct_drift=False, offset=None):
@@ -991,10 +999,14 @@ class WellpyModel(HasTraits):
 
         line.overlays.append(z)
 
-        line.active_tool = tool = RangeSelection(line, left_button_selects=True)
+        tool = RangeSelection(line, left_button_selects=True)
         line.overlays.append(RangeSelectionOverlay(component=line))
-
         self._depth_to_water_range_tool = tool
+
+        line.active_tool = tool = LassoSelection(component=line)
+        line.overlays.append(LassoOverlay(component=line, lasso_selection=tool))
+
+        self._depth_to_water_rect_tool = tool
         # plot manual measurements
         plot.plot((MANUAL_WATER_DEPTH_X, MANUAL_WATER_DEPTH_Y),
                   marker='circle', marker_size=MARKER_SIZE,
