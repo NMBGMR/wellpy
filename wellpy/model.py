@@ -617,7 +617,7 @@ class WellpyModel(HasTraits):
         plot = self._plots[DEPTH_TO_WATER]
 
         sel = plot.default_index.metadata['selection']
-        if sel and len(sel):
+        if sel is not None and len(sel):
             dtw[sel] += offset
         else:
             dtw = dtw + offset
