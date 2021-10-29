@@ -35,7 +35,7 @@ class PointIDAdapter(TabularAdapter):
                ('Serial', 'serial_num')]
 
     name_width = Int(60)
-    is_acoustic_width=Int(60)
+    is_acoustic_width = Int(60)
     font = 'arial 10'
 
 
@@ -67,7 +67,7 @@ class ToolboxPane(TraitsDockPane):
     remove_selection_button = Button('Remove Selected')
     offset_button = Button('Apply Offset')
     offset = Float
-    
+
     calculate_button = Button('Calculate')
     correct_drift = Bool
     drift_correction_direction = Enum('Forward', 'Reverse')
@@ -76,11 +76,12 @@ class ToolboxPane(TraitsDockPane):
     save_png_button = Button('Save PNG')
     save_pdf_button = Button('Save PDF')
     match_timeseries_button = Button('Match Timeseries')
-    
+
     undo_button = Button('Undo')
+
     def _offset_button_fired(self):
-        self.model.calculate_depth_to_water(offset=self.offset)
-        
+        self.model.offset_depth_to_water(self.offset)
+
     def _remove_selection_button_fired(self):
         self.model.remove_selection()
 
@@ -128,17 +129,17 @@ class ToolboxPane(TraitsDockPane):
 
     def traits_view(self):
         manual_grp = HGroup(
-                            # UItem('pane.omit_selection_button', tooltip='Omit the selected Manual WL measurements '
-                            #                                             'from calculation. Measurements WILL '
-                            #                                             'be displayed in the Depth To Water graph'),
-                            # UItem('pane.remove_selection_button', tooltip='Remove selected Manual WL measurements '
-                            #                                               'from calculation. Measurements WILL NOT be'
-                            #                                               'displayed in the Depth To Water graph'),
-                            UItem('pane.snap_to_selected_button', tooltip='Offset the Adjusted Head to the selected '
-                                                                          'Manual WL measurement'),
-                            UItem('pane.offset_button'), UItem('pane.offset'),                                 
-                            # Item('pane.constant_offset', label='Constant Offset'),
-                            show_border=True, label='Manual')
+            # UItem('pane.omit_selection_button', tooltip='Omit the selected Manual WL measurements '
+            #                                             'from calculation. Measurements WILL '
+            #                                             'be displayed in the Depth To Water graph'),
+            # UItem('pane.remove_selection_button', tooltip='Remove selected Manual WL measurements '
+            #                                               'from calculation. Measurements WILL NOT be'
+            #                                               'displayed in the Depth To Water graph'),
+            UItem('pane.snap_to_selected_button', tooltip='Offset the Adjusted Head to the selected '
+                                                          'Manual WL measurement'),
+            UItem('pane.offset_button'), UItem('pane.offset'),
+            # Item('pane.constant_offset', label='Constant Offset'),
+            show_border=True, label='Manual')
 
         auto_grp = VGroup(HGroup(Item('pane.adj_head_threshold', label='Threshold'),
                                  UItem('pane.fix_adj_head_data_button', tooltip='Automatically remove offsets greater '
@@ -151,28 +152,28 @@ class ToolboxPane(TraitsDockPane):
 
         calculate_grp = VGroup(
 
-                               # HGroup(Item('pane.correct_drift'),
-                               #        Item('pane.drift_correction_direction'),
-                               #        UItem('pane.calculate_button'),
-                               #        UItem('pane.undo_button')),
-                               #
-                               HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
-                                      UItem('pane.fix_depth_to_water_data_button', tooltip='Automatically remove '
-                                                                                          'offsets greater '
-                                                                                'than "Threshold"')),
-                               HGroup(Item('pane.upspike_threshold', label='Threshold'),
-                                      UItem('pane.fix_acoustic_upspike_button')),
-                                                                                
-                               # HGroup(
-                               #     # Item('pane.match_timeseries_threshold', label='Threshold'),
-                               #     UItem('pane.match_timeseries_button',
-                               #           tooltip='Automatically remove offsets greater '
-                               #                   'than "Threshold"'), ),
-                               HGroup(UItem('pane.save_db_button'),
-                                      UItem('pane.save_csv_button'),
-                                      UItem('pane.save_pdf_button')),
-                               label='Depth To Water',
-                               show_border=True)
+            # HGroup(Item('pane.correct_drift'),
+            #        Item('pane.drift_correction_direction'),
+            #        UItem('pane.calculate_button'),
+            #        UItem('pane.undo_button')),
+            #
+            HGroup(Item('pane.depth_to_water_threshold', label='Threshold'),
+                   UItem('pane.fix_depth_to_water_data_button', tooltip='Automatically remove '
+                                                                        'offsets greater '
+                                                                        'than "Threshold"')),
+            HGroup(Item('pane.upspike_threshold', label='Threshold'),
+                   UItem('pane.fix_acoustic_upspike_button')),
+
+            # HGroup(
+            #     # Item('pane.match_timeseries_threshold', label='Threshold'),
+            #     UItem('pane.match_timeseries_button',
+            #           tooltip='Automatically remove offsets greater '
+            #                   'than "Threshold"'), ),
+            HGroup(UItem('pane.save_db_button'),
+                   UItem('pane.save_csv_button'),
+                   UItem('pane.save_pdf_button')),
+            label='Depth To Water',
+            show_border=True)
         v = View(VGroup(manual_grp, auto_grp, calculate_grp))
         return v
 

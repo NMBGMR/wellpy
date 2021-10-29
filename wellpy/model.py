@@ -606,7 +606,16 @@ class WellpyModel(HasTraits):
             if self.data_model.is_acoustic:
                 dev = -dev
             self.calculate_depth_to_water(value=v + dev)
-  
+
+    def offset_depth_to_water(self, offset):
+        dtw = self.data_model.depth_to_water_y
+        if not len(dtw):
+            self.calculate_depth_to_water()
+
+        dtw = self.data_model.depth_to_water_y
+        self._set_dtw(dtw+offset)
+        self.refresh_plot()
+
     def calculate_depth_to_water(self, value=None, correct_drift=False, offset=None):
         """
 
@@ -633,7 +642,7 @@ class WellpyModel(HasTraits):
         if value is not None:
             dtw = value
         else:
-            
+
             if self.data_model.is_acoustic:
                 dtw = self.data_model.raw_depth_to_water_y
             else:
@@ -647,9 +656,6 @@ class WellpyModel(HasTraits):
                         v = calculated_dtw_bin(m1[1], m0[1], xs[mask], ah[mask])
                         dtw[mask] = v
 
-        if offset:
-            dtw += offset
-            
         plot = self._plots[DEPTH_TO_WATER]
         plot.data.set_data(DEPTH_X, xs)
         plot.data.set_data(DEPTH_Y, dtw)

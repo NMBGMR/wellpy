@@ -90,20 +90,20 @@ class WellpyController(Controller):
                 if os.path.isfile(dlg.path):
                     self.model.load_file(dlg.path)
 
-    def apply_offset(self, info):
-        if not self.model.has_selection():
-            ret = confirm(None, 'No Range selected? Apply to entire dataset')
-            if ret != YES:
-                return
-
-        v = View(Item('controller.offset_kind', label='Kind'),
-                 Item('controller.offset', enabled_when='kind="Constant"'),
-                 title='Set Offset',
-                 buttons=['OK', 'Cancel'],
-                 kind='livemodal')
-        info = self.edit_traits(view=v)
-        if info.result:
-            self.model.apply_offset(self.offset_kind, self.offset)
+    # def apply_offset(self, info):
+    #     if not self.model.has_selection():
+    #         ret = confirm(None, 'No Range selected? Apply to entire dataset')
+    #         if ret != YES:
+    #             return
+    #
+    #     v = View(Item('controller.offset_kind', label='Kind'),
+    #              Item('controller.offset', enabled_when='kind="Constant"'),
+    #              title='Set Offset',
+    #              buttons=['OK', 'Cancel'],
+    #              kind='livemodal')
+    #     info = self.edit_traits(view=v)
+    #     if info.result:
+    #         self.model.apply_offset(self.offset_kind, self.offset)
 
     def traits_view(self):
         actions = [Action(name='Open Excel...', action='open_csv')]
@@ -111,7 +111,7 @@ class WellpyController(Controller):
         menubar = MenuBarManager(menu)
 
         actions = [Action(name='Open CSV', action='open_csv'),
-                   Action(name='Apply Offset', action='apply_offset'),
+                   # Action(name='Apply Offset', action='apply_offset'),
                    Action(name='Configure DB', action='configure_db'),
                    Action(name='Import DB', action='import_db'),
                    ]
