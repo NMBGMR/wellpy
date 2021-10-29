@@ -1003,7 +1003,7 @@ class WellpyModel(HasTraits):
         line.overlays.append(RangeSelectionOverlay(component=line))
         self._depth_to_water_range_tool = tool
 
-        line.active_tool = tool = LassoSelection(component=line)
+        line.active_tool = tool = LassoSelection(component=line, selection_datasource=line.index)
         line.overlays.append(LassoOverlay(component=line, lasso_selection=tool))
 
         self._depth_to_water_rect_tool = tool
