@@ -215,6 +215,28 @@ class DataModel:
                 ys[idxs[0] + 1:idxs[1] + 1] += offset
         return ys, zs, fs
 
+    def remove_duplicates(self, last):
+
+        for i, xi in self.x:
+            if xi>last:
+                idx = i
+                break
+        else:
+            idx = None
+
+        if idx:
+            for attr in ('x', 'water_head',
+                         'adjusted_water_head',
+                         'water_temp',
+                          '_water_head',
+                          '_owater_head',
+                         'cond'):
+                try:
+                    v = getattr(self, attr)
+                    setattr(self, attr, v[idx:])
+                except BaseException as e:
+                    print('failed to remove duplicates for {}. exc="{}"'.format(attr, e))
+
     # private
     def _load(self, p):
         pp = p.lower()

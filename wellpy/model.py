@@ -790,6 +790,16 @@ class WellpyModel(HasTraits):
 
         if self.selected_point_id:
             self.scroll_to_row = self.viewer_point_ids.index(self.selected_point_id)
+            # remove duplicates
+            # ws = self.db.get_acoustic_water_levels(self.selected_point_id)
+            # if not ws:
+            #     ws = self.db.get_continuous_water_levels(self.selected_point_id)
+            if not self.data_model.is_acoustic:
+                args = self.get_continuous(self.selected_point_id, qced=None, is_acoustic=False)
+                if args:
+                    xs, wts, hs, ahs, ds = args
+                    last = xs[-1]
+                    self.data_model.remove_duplicates(last)
 
         self.retrieve_depth_to_water()
         if data.is_acoustic:
