@@ -795,7 +795,7 @@ class WellpyModel(HasTraits):
             # if not ws:
             #     ws = self.db.get_continuous_water_levels(self.selected_point_id)
             if not self.data_model.is_acoustic:
-                args = self.get_continuous(self.selected_point_id, qced=None, is_acoustic=False)
+                args = self.get_continuous(self.selected_point_id.name, qced=None, is_acoustic=False)
                 if args:
                     xs, wts, hs, ahs, ds = args
                     last = xs[-1]
