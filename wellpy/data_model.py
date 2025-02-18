@@ -217,7 +217,7 @@ class DataModel:
 
     def remove_duplicates(self, last):
 
-        for i, xi in self.x:
+        for i, xi in enumerate(self.x):
             if xi>last:
                 idx = i
                 break
